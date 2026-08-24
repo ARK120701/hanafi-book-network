@@ -100,7 +100,7 @@
 
   #canvas{
     position:relative;
-    width:7000px;
+    width:7400px;
     height:7600px;
     transform-origin:0 0;
     background-image:
@@ -111,7 +111,7 @@
   svg#lines{
     position:absolute;
     top:0; left:0;
-    width:7000px;
+    width:7400px;
     height:7600px;
     pointer-events:none;
   }
@@ -119,7 +119,7 @@
   #timeline{
     position:absolute;
     top:0; left:0;
-    width:7000px;
+    width:7400px;
     height:7600px;
     pointer-events:none;
     z-index:1;
@@ -132,25 +132,27 @@
   }
   .century-label{
     position:absolute;
-    left:14px;
+    left:20px;
     font-family:'Amiri', serif;
     font-weight:700;
-    font-size:15px;
+    font-size:21px;
     color:var(--gold);
-    background:rgba(243,234,217,0.9);
-    padding:3px 10px;
-    border:1px solid rgba(138,115,85,0.35);
-    border-radius:5px;
+    background:rgba(243,234,217,0.95);
+    padding:12px 20px;
+    border:2px solid rgba(138,115,85,0.45);
+    border-radius:9px;
     white-space:nowrap;
-    line-height:1.5;
+    line-height:1.4;
+    box-shadow:0 2px 8px rgba(43,35,32,0.10);
   }
   .century-label .en{
     display:block;
     font-family:'Cairo', sans-serif;
     font-weight:600;
     font-style:italic;
-    font-size:11px;
+    font-size:14px;
     color:#6b5d4f;
+    margin-top:2px;
   }
 
   .node{
@@ -164,14 +166,18 @@
     padding:10px 18px;
     text-align:center;
     box-shadow:0 2px 6px rgba(43,35,32,0.12);
-    cursor:grab;
+    cursor:pointer;
     user-select:none;
     white-space:nowrap;
     z-index:5;
   }
+  body.admin .node{ cursor:grab; }
   .node.selected{
     border-color:var(--maroon);
     box-shadow:0 0 0 3px rgba(122,46,46,0.25);
+  }
+  .node.viewed{
+    box-shadow:0 0 0 3px rgba(122,46,46,0.35);
   }
   .node.multiselect{
     border-color:var(--gold);
@@ -278,28 +284,178 @@
     border:1px solid var(--line);
   }
   #menu button:last-child{margin-bottom:0;}
+
+  body:not(.admin) .admin-only{ display:none !important; }
+
+  #notesPopups{
+    position:fixed;
+    top:120px;
+    right:20px;
+    display:none;
+    flex-direction:column;
+    gap:14px;
+    z-index:40;
+    width:340px;
+    max-height:calc(100vh - 140px);
+    overflow-y:auto;
+  }
+  .popup{
+    background:#fffaf0;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(43,35,32,0.25);
+    padding:14px 16px;
+    position:relative;
+  }
+  .popup-close{
+    position:absolute;
+    top:8px; right:8px;
+    width:22px; height:22px;
+    padding:0;
+    border-radius:50%;
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--line);
+    font-size:13px;
+    line-height:1;
+  }
+  .popup h3{
+    margin:0 26px 10px 0;
+    font-family:'Amiri', serif;
+    font-size:17px;
+    color:var(--maroon);
+  }
+  .popup-subtitle{
+    display:block;
+    font-family:'Cairo', sans-serif;
+    font-weight:600;
+    font-style:italic;
+    font-size:12px;
+    color:#6b5d4f;
+    margin-top:2px;
+  }
+  .popup textarea{
+    width:100%;
+    min-height:90px;
+    font-family:'Cairo', sans-serif;
+    font-size:13px;
+    padding:8px 10px;
+    border:1.5px solid var(--line);
+    border-radius:5px;
+    background:#fff;
+    color:var(--ink);
+    resize:vertical;
+    box-sizing:border-box;
+  }
+  .notes-readonly{
+    font-size:13.5px;
+    line-height:1.5;
+    color:var(--ink);
+    white-space:pre-wrap;
+  }
+  .popup-save{
+    margin-top:8px;
+    font-size:12.5px;
+    padding:6px 12px;
+  }
+  .popup-conn-header{
+    margin-top:12px;
+    font-size:12px;
+    font-weight:700;
+    color:#6b5d4f;
+    text-transform:uppercase;
+    letter-spacing:0.03em;
+  }
+  .popup-conn-list{
+    margin-top:6px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .popup-conn-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    font-size:12.5px;
+    padding:4px 6px;
+    background:var(--parchment-deep);
+    border-radius:4px;
+  }
+  .popup-conn-remove{
+    flex-shrink:0;
+    width:18px; height:18px;
+    padding:0;
+    border-radius:50%;
+    background:var(--maroon);
+    color:#fff8ee;
+    font-size:11px;
+    line-height:1;
+  }
+  .popup-conn-empty{
+    font-size:12px;
+    font-style:italic;
+    color:#6b5d4f;
+  }
+
+  .export-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(43,35,32,0.45);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+  }
+  .export-box{
+    background:#fffaf0;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 10px 30px rgba(43,35,32,0.3);
+    padding:20px;
+    width:min(600px, 90vw);
+    max-height:80vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .export-box h3{ margin:0 0 8px; font-family:'Amiri',serif; color:var(--maroon); }
+  .export-box p{ margin:0 0 10px; font-size:13px; color:#6b5d4f; }
+  .export-box textarea{
+    flex:1;
+    min-height:280px;
+    font-family:monospace;
+    font-size:12px;
+    padding:10px;
+    border:1.5px solid var(--line);
+    border-radius:5px;
+    background:#fff;
+    color:var(--ink);
+  }
+  .export-btn-row{
+    display:flex;
+    gap:10px;
+    margin-top:12px;
+    justify-content:flex-end;
+  }
 </style>
 </head>
 <body>
 
   <div id="toolbar">
-    <input type="text" id="bookName" placeholder="اسم الكتاب / Book name" onkeydown="if(event.key==='Enter')addBook()">
-    <button onclick="addBook()">+ Add book</button>
-    <button id="combineBtn" class="secondary" onclick="toggleCombineMode()">⊕ Combine books</button>
-    <button class="secondary" onclick="clearSelection()">Cancel selection</button>
-    <button class="secondary" onclick="resetAll()">Reset board</button>
+    <div class="admin-only" style="display:flex;align-items:center;gap:10px;">
+      <input type="text" id="bookName" placeholder="اسم الكتاب / Book name" onkeydown="if(event.key==='Enter')addBook()">
+      <button onclick="addBook()">+ Add book</button>
+      <button id="combineBtn" class="secondary" onclick="toggleCombineMode()">⊕ Combine books</button>
+      <button id="connectBtn" class="secondary" onclick="toggleConnectMode()">🔗 Connect mode</button>
+      <button class="secondary" onclick="clearSelection()">Cancel selection</button>
+      <button class="secondary" onclick="resetAll()">Reset board</button>
+    </div>
 
     <div style="display:flex;align-items:center;gap:6px;margin-inline-start:12px;">
       <button class="secondary" onclick="zoomOut()">−</button>
       <span id="zoomLabel" style="font-size:13px;min-width:42px;text-align:center;">100%</span>
       <button class="secondary" onclick="zoomIn()">+</button>
       <button class="secondary" onclick="zoomReset()">Reset zoom</button>
-    </div>
-
-    <div id="selectedColorControl" style="display:none;align-items:center;gap:6px;margin-inline-start:12px;">
-      <span id="selectedColorName" style="font-size:13px;font-family:'Amiri',serif;font-weight:700;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
-      <input type="text" id="selectedColorInput" placeholder="#2f6f4f or teal" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:5px;background:#fffaf0;font-family:'Cairo',sans-serif;font-size:13px;" onkeydown="if(event.key==='Enter')applySelectedColor()">
-      <button onclick="applySelectedColor()">Set color</button>
     </div>
 
     <div class="legend">
@@ -310,9 +466,14 @@
       <div class="legend-item"><span style="width:14px;height:14px;border-radius:50%;background:#a31d1d;display:inline-block;"></span> Manuscript (مخطوط)</div>
       <div class="legend-item" style="font-style:italic;">Line color = the book it comes from</div>
     </div>
+
+    <div class="admin-only" style="display:flex;align-items:center;gap:8px;">
+      <button class="secondary" onclick="exportState()">⭳ Export</button>
+      <button class="secondary" onclick="exitAdminMode()">Exit edit mode</button>
+    </div>
   </div>
 
-  <div id="hint">Click "Add book" to place a book. Click one book, then another, to connect them. Hover a book and click the small circle in its corner to mark it as a manuscript. Ctrl/Cmd + scroll to zoom.</div>
+  <div id="hint">Click a book to see notes about it and its author, and to highlight its connections. Ctrl/Cmd + scroll to zoom, drag to pan.</div>
 
   <div id="canvas-wrap">
     <div id="zoom-sizer">
@@ -322,6 +483,8 @@
       </div>
     </div>
   </div>
+
+  <div id="notesPopups"></div>
 
   <div id="menu">
     <button onclick="makeEdge('commentary')">Commentary — bold line</button>
@@ -363,9 +526,44 @@ let pendingPair = null;
 let dragInfo = null;
 let combineMode = false;
 let combineSet = new Set();
+let connectMode = false;
+let viewedNode = null;
 let zoom = 1;
 const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
 const STORAGE_KEY = 'hanafi-book-network';
+
+// Security-through-obscurity only: this key is visible to anyone who views the page
+// source. It just keeps casual visitors from stumbling into edit mode.
+const ADMIN_KEY = 'k9m2x7qz4wtb31r';
+const ADMIN_FLAG_KEY = 'hanafi-book-network:isAdmin';
+let isAdmin = false;
+
+function initAdminMode(){
+  try{
+    const params = new URLSearchParams(window.location.search);
+    const editParam = params.get('edit');
+    if(editParam && editParam === ADMIN_KEY){
+      localStorage.setItem(ADMIN_FLAG_KEY, '1');
+      history.replaceState(null, '', window.location.pathname + window.location.hash);
+    }
+    isAdmin = localStorage.getItem(ADMIN_FLAG_KEY) === '1';
+  }catch(e){ isAdmin = false; }
+  document.body.classList.toggle('admin', isAdmin);
+}
+
+function exitAdminMode(){
+  localStorage.removeItem(ADMIN_FLAG_KEY);
+  isAdmin = false;
+  document.body.classList.remove('admin');
+  connectMode = false;
+  combineMode = false;
+  combineSet.clear();
+  selected = null;
+  pendingPair = null;
+  viewedNode = null;
+  hideMenu();
+  render();
+}
 
 async function loadState(){
   try{
@@ -1269,6 +1467,14 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  if(!state._v2LayoutRefresh){
+    // Shift every book further right so nothing overlaps the enlarged century-label boxes.
+    const SHIFT_X = 360;
+    state.nodes.forEach(n => { n.x += SHIFT_X; });
+    state._v2LayoutRefresh = true;
+    changed = true;
+  }
+
   state.nodes.forEach(n => {
     if(n.type !== 'combine' && !n.color){
       n.color = nextColor();
@@ -1350,7 +1556,7 @@ function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (7000 * zoom) + 'px';
+  sizer.style.width = (7400 * zoom) + 'px';
   sizer.style.height = (7600 * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
@@ -1371,6 +1577,7 @@ function zoomReset(){
 }
 
 function addBook(){
+  if(!isAdmin) return;
   const input = document.getElementById('bookName');
   const name = input.value.trim();
   if(!name) return;
@@ -1384,22 +1591,20 @@ function addBook(){
 }
 
 function toggleCombineMode(){
-  const btn = document.getElementById('combineBtn');
-  const hint = document.getElementById('hint');
+  if(!isAdmin) return;
 
   if(!combineMode){
     combineMode = true;
+    connectMode = false;
     combineSet.clear();
     selected = null;
-    btn.textContent = '⊕ Done combining';
-    hint.textContent = 'Click all the source books, then click "⊕ Done combining" — you\'ll be asked for the new book\'s name.';
+    pendingPair = null;
+    hideMenu();
     render();
     return;
   }
 
   combineMode = false;
-  btn.textContent = '⊕ Combine books';
-  hint.textContent = 'Click "Add book" to place a book. Click one book, then another, to connect them. Hover a book and click the small circle in its corner to mark it as a manuscript.';
   if(combineSet.size >= 2){
     finishCombine();
   } else {
@@ -1408,7 +1613,21 @@ function toggleCombineMode(){
   }
 }
 
+function toggleConnectMode(){
+  if(!isAdmin) return;
+  connectMode = !connectMode;
+  if(connectMode){
+    combineMode = false;
+    combineSet.clear();
+  }
+  selected = null;
+  pendingPair = null;
+  hideMenu();
+  render();
+}
+
 function finishCombine(){
+  if(!isAdmin) return;
   const ids = Array.from(combineSet);
   const sources = ids.map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
   if(sources.length < 2) return;
@@ -1434,6 +1653,7 @@ function finishCombine(){
 }
 
 function clearSelection(){
+  if(!isAdmin) return;
   selected = null;
   pendingPair = null;
   hideMenu();
@@ -1441,6 +1661,7 @@ function clearSelection(){
 }
 
 function resetAll(){
+  if(!isAdmin) return;
   if(!confirm('Clear the entire board? This cannot be undone.')) return;
   state = { nodes: [], edges: [] };
   saveState();
@@ -1448,15 +1669,18 @@ function resetAll(){
 }
 
 function deleteNode(id, ev){
+  if(!isAdmin) return;
   ev.stopPropagation();
   state.nodes = state.nodes.filter(n => n.id !== id);
   state.edges = state.edges.filter(e => e.from !== id && e.to !== id);
   if(selected === id) selected = null;
+  if(viewedNode === id) viewedNode = null;
   saveState();
   render();
 }
 
 function toggleManuscript(id, ev){
+  if(!isAdmin) return;
   ev.stopPropagation();
   const node = state.nodes.find(n => n.id === id);
   if(!node) return;
@@ -1466,6 +1690,7 @@ function toggleManuscript(id, ev){
 }
 
 function renameNode(id, ev){
+  if(!isAdmin) return;
   ev.stopPropagation();
   const node = state.nodes.find(n => n.id === id);
   if(!node) return;
@@ -1485,22 +1710,8 @@ function isValidCssColor(str){
   return opt.style.color !== '';
 }
 
-function applySelectedColor(){
-  if(!selected) return;
-  const node = state.nodes.find(n => n.id === selected);
-  if(!node || node.type === 'combine') return;
-  const val = document.getElementById('selectedColorInput').value.trim();
-  if(!val) return;
-  if(!isValidCssColor(val)){
-    alert('"' + val + '" doesn\'t look like a valid color. Try a hex code like #2f6f4f or a name like teal.');
-    return;
-  }
-  node.color = val;
-  saveState();
-  render();
-}
-
 function promptColorText(id, ev){
+  if(!isAdmin) return;
   ev.stopPropagation();
   const node = state.nodes.find(n => n.id === id);
   if(!node) return;
@@ -1518,6 +1729,7 @@ function promptColorText(id, ev){
 }
 
 function openColorPicker(id, ev){
+  if(!isAdmin) return;
   ev.stopPropagation();
   const node = state.nodes.find(n => n.id === id);
   if(!node) return;
@@ -1548,24 +1760,261 @@ function onNodeClick(id, ev){
   if(dragInfo && dragInfo.moved) return;
 
   if(combineMode){
+    if(!isAdmin) return;
     if(combineSet.has(id)) combineSet.delete(id);
     else combineSet.add(id);
     render();
     return;
   }
 
-  if(selected === null){
-    selected = id;
-    render();
+  if(connectMode){
+    if(!isAdmin) return;
+    if(selected === null){
+      selected = id;
+      render();
+      return;
+    }
+    if(selected === id){
+      selected = null;
+      render();
+      return;
+    }
+    pendingPair = { from: selected, to: id };
+    showMenu(ev.clientX, ev.clientY);
     return;
   }
-  if(selected === id){
-    selected = null;
-    render();
+
+  const node = state.nodes.find(n => n.id === id);
+  if(!node || node.type === 'combine') return;
+
+  if(viewedNode === id){
+    closeNotesPopup();
+  } else {
+    openNotesPopup(id);
+  }
+}
+
+function openNotesPopup(id){
+  viewedNode = id;
+  render();
+}
+
+function closeNotesPopup(){
+  if(viewedNode === null) return;
+  viewedNode = null;
+  render();
+}
+
+function getConnectionsFor(id){
+  return state.edges.filter(e => e.from === id || e.to === id).map(e => {
+    const otherId = e.from === id ? e.to : e.from;
+    const other = state.nodes.find(n => n.id === otherId);
+    const dir = e.from === id ? '→' : '←';
+    return {
+      edgeId: e.id,
+      text: dir + ' ' + (other ? other.name.split('\n')[0] : '?') + ' (' + e.type + ')'
+    };
+  });
+}
+
+function removeConnection(edgeId){
+  if(!isAdmin) return;
+  state.edges = state.edges.filter(e => e.id !== edgeId);
+  saveState();
+  render();
+}
+
+function buildPopup(opts){
+  const box = document.createElement('div');
+  box.className = 'popup';
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'popup-close';
+  closeBtn.textContent = '×';
+  closeBtn.onclick = closeNotesPopup;
+  box.appendChild(closeBtn);
+
+  const h = document.createElement('h3');
+  h.textContent = opts.title;
+  if(opts.subtitle){
+    h.appendChild(document.createElement('br'));
+    const sub = document.createElement('span');
+    sub.className = 'popup-subtitle';
+    sub.textContent = opts.subtitle;
+    h.appendChild(sub);
+  }
+  box.appendChild(h);
+
+  if(isAdmin){
+    const textarea = document.createElement('textarea');
+    textarea.value = opts.notesValue;
+    textarea.placeholder = opts.placeholder;
+    box.appendChild(textarea);
+
+    const saveBtn = document.createElement('button');
+    saveBtn.className = 'popup-save';
+    saveBtn.textContent = 'Save notes';
+    saveBtn.onclick = () => { opts.onSave(textarea.value); render(); };
+    box.appendChild(saveBtn);
+  } else {
+    const p = document.createElement('div');
+    p.className = 'notes-readonly';
+    p.textContent = opts.notesValue ? opts.notesValue : 'No notes yet.';
+    box.appendChild(p);
+  }
+
+  if(opts.connections){
+    const connHeader = document.createElement('div');
+    connHeader.className = 'popup-conn-header';
+    connHeader.textContent = 'Connections';
+    box.appendChild(connHeader);
+
+    const list = document.createElement('div');
+    list.className = 'popup-conn-list';
+    if(opts.connections.length === 0){
+      const none = document.createElement('div');
+      none.className = 'popup-conn-empty';
+      none.textContent = 'No connections.';
+      list.appendChild(none);
+    } else {
+      opts.connections.forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'popup-conn-row';
+        const label = document.createElement('span');
+        label.textContent = c.text;
+        row.appendChild(label);
+        const rm = document.createElement('button');
+        rm.className = 'popup-conn-remove';
+        rm.textContent = '×';
+        rm.title = 'Remove this connection';
+        rm.onclick = () => removeConnection(c.edgeId);
+        row.appendChild(rm);
+        list.appendChild(row);
+      });
+    }
+    box.appendChild(list);
+  }
+
+  return box;
+}
+
+function renderPopups(){
+  const container = document.getElementById('notesPopups');
+  container.innerHTML = '';
+  if(!viewedNode){ container.style.display = 'none'; return; }
+  const node = state.nodes.find(n => n.id === viewedNode);
+  if(!node){ viewedNode = null; container.style.display = 'none'; return; }
+  container.style.display = 'flex';
+
+  const lines = node.name.split('\n');
+  container.appendChild(buildPopup({
+    title: lines[0],
+    subtitle: lines[1] || '',
+    notesValue: node.bookNotes || '',
+    placeholder: 'Notes about this book...',
+    onSave: (val) => { node.bookNotes = val; saveState(); },
+    connections: isAdmin ? getConnectionsFor(node.id) : null
+  }));
+
+  container.appendChild(buildPopup({
+    title: node.author || 'Author',
+    subtitle: '',
+    notesValue: node.authorNotes || '',
+    placeholder: 'Notes about the author...',
+    onSave: (val) => { node.authorNotes = val; saveState(); },
+    connections: null
+  }));
+}
+
+function updateHint(){
+  const hint = document.getElementById('hint');
+  if(!isAdmin){
+    hint.textContent = 'Click a book to see notes about it and its author, and to highlight its connections. Ctrl/Cmd + scroll to zoom, drag to pan.';
     return;
   }
-  pendingPair = { from: selected, to: id };
-  showMenu(ev.clientX, ev.clientY);
+  if(combineMode){
+    hint.textContent = 'Click all the source books, then click "⊕ Done combining" — you\'ll be asked for the new book\'s name.';
+    return;
+  }
+  if(connectMode){
+    hint.textContent = 'Click one book, then another, to connect them. Click "🔗 Connect mode" again to turn it off.';
+    return;
+  }
+  hint.textContent = 'Click a book to view or edit its notes. Turn on "🔗 Connect mode" to draw new connections, or "⊕ Combine books" to merge several into a new work. Hover a book for its manuscript/color/delete controls, or double-click to rename. Ctrl/Cmd + scroll to zoom.';
+}
+
+function updateModeButtons(){
+  const combineBtn = document.getElementById('combineBtn');
+  if(combineBtn) combineBtn.textContent = combineMode ? '⊕ Done combining' : '⊕ Combine books';
+  const connectBtn = document.getElementById('connectBtn');
+  if(connectBtn) connectBtn.textContent = connectMode ? '🔗 Exit connect mode' : '🔗 Connect mode';
+}
+
+function exportState(){
+  if(!isAdmin) return;
+  closeExportOverlay();
+  const overlay = document.createElement('div');
+  overlay.id = 'exportOverlay';
+  overlay.className = 'export-overlay';
+  overlay.onclick = (ev) => { if(ev.target === overlay) closeExportOverlay(); };
+
+  const box = document.createElement('div');
+  box.className = 'export-box';
+
+  const h = document.createElement('h3');
+  h.textContent = 'Export board data';
+  box.appendChild(h);
+
+  const p = document.createElement('p');
+  p.textContent = 'Copy this and send it to Claude to publish your changes for everyone.';
+  box.appendChild(p);
+
+  const ta = document.createElement('textarea');
+  ta.readOnly = true;
+  ta.value = JSON.stringify(state, null, 2);
+  box.appendChild(ta);
+
+  const btnRow = document.createElement('div');
+  btnRow.className = 'export-btn-row';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.textContent = 'Copy to clipboard';
+  copyBtn.onclick = () => {
+    ta.select();
+    const restore = () => { copyBtn.textContent = 'Copy to clipboard'; };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(ta.value).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(restore, 1500);
+      }).catch(() => {
+        document.execCommand('copy');
+        copyBtn.textContent = 'Copied!';
+        setTimeout(restore, 1500);
+      });
+    } else {
+      document.execCommand('copy');
+      copyBtn.textContent = 'Copied!';
+      setTimeout(restore, 1500);
+    }
+  };
+  btnRow.appendChild(copyBtn);
+
+  const closeBtn = document.createElement('button');
+  closeBtn.className = 'secondary';
+  closeBtn.textContent = 'Close';
+  closeBtn.onclick = closeExportOverlay;
+  btnRow.appendChild(closeBtn);
+
+  box.appendChild(btnRow);
+  overlay.appendChild(box);
+  document.body.appendChild(overlay);
+  ta.focus();
+  ta.select();
+}
+
+function closeExportOverlay(){
+  const el = document.getElementById('exportOverlay');
+  if(el) el.remove();
 }
 
 function showMenu(x, y){
@@ -1582,6 +2031,7 @@ function hideMenu(){
 }
 
 function makeEdge(type){
+  if(!isAdmin) return;
   if(!pendingPair) return;
   state.edges.push({ id: uid(), from: pendingPair.from, to: pendingPair.to, type });
   selected = null;
@@ -1591,6 +2041,7 @@ function makeEdge(type){
 }
 
 function startDrag(id, ev){
+  if(!isAdmin) return;
   const node = state.nodes.find(n => n.id === id);
   const wrap = document.getElementById('canvas-wrap');
   dragInfo = {
@@ -1638,18 +2089,11 @@ function edgeColor(a, b){
 }
 
 function render(){
+  updateHint();
+  updateModeButtons();
+
   const canvas = document.getElementById('canvas');
   document.querySelectorAll('.node').forEach(n => n.remove());
-
-  const colorCtrl = document.getElementById('selectedColorControl');
-  const selNode = selected ? state.nodes.find(n => n.id === selected) : null;
-  if(selNode && selNode.type !== 'combine'){
-    colorCtrl.style.display = 'flex';
-    document.getElementById('selectedColorName').textContent = selNode.name.split('\n')[0];
-    document.getElementById('selectedColorInput').value = selNode.color || '';
-  } else {
-    colorCtrl.style.display = 'none';
-  }
 
   const elMap = {};
   state.nodes.forEach(n => {
@@ -1660,6 +2104,7 @@ function render(){
     if(selected === n.id) cls += ' selected';
     if(combineSet.has(n.id)) cls += ' multiselect';
     if(n.manuscript) cls += ' manuscript';
+    if(viewedNode === n.id) cls += ' viewed';
     div.className = cls;
     div.style.left = n.x + 'px';
     div.style.top = n.y + 'px';
@@ -1675,12 +2120,12 @@ function render(){
       div.innerHTML = lines.map((l,i) => `<div style="${i===1 ? 'font-family:Cairo,sans-serif;font-weight:600;font-size:13px;font-style:italic;color:#6b5d4f;margin-top:3px;' : ''}">${l}</div>`).join('');
     }
 
-    div.onmousedown = (ev) => { startDrag(n.id, ev); };
+    if(isAdmin) div.onmousedown = (ev) => { startDrag(n.id, ev); };
     div.onclick = (ev) => { onNodeClick(n.id, ev); };
-    div.ondblclick = (ev) => { renameNode(n.id, ev); };
-    div.title = isCombine ? '' : ((n.author ? n.author + ' — ' : '') + 'Double-click to rename');
+    if(isAdmin) div.ondblclick = (ev) => { renameNode(n.id, ev); };
+    div.title = isCombine ? '' : (isAdmin ? ((n.author ? n.author + ' — ' : '') + 'Double-click to rename') : (n.author || ''));
 
-    if(!isCombine){
+    if(!isCombine && isAdmin){
       const ms = document.createElement('div');
       ms.className = 'ms-toggle';
       ms.textContent = 'MS';
@@ -1701,13 +2146,13 @@ function render(){
       colorTextBtn.title = 'Type a color (hex code or name)';
       colorTextBtn.onclick = (ev) => promptColorText(n.id, ev);
       div.appendChild(colorTextBtn);
-    }
 
-    const del = document.createElement('div');
-    del.className = 'del';
-    del.textContent = '×';
-    del.onclick = (ev) => deleteNode(n.id, ev);
-    div.appendChild(del);
+      const del = document.createElement('div');
+      del.className = 'del';
+      del.textContent = '×';
+      del.onclick = (ev) => deleteNode(n.id, ev);
+      div.appendChild(del);
+    }
     canvas.appendChild(div);
     elMap[n.id] = div;
   });
@@ -1751,17 +2196,23 @@ function render(){
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
+    const isHL = !!viewedNode && (e.from === viewedNode || e.to === viewedNode);
+    const dimmed = !!viewedNode && !isHL;
+    const widthMul = isHL ? 1.7 : 1;
+
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('fill', 'none');
     path.setAttribute('stroke', color);
     path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('opacity', dimmed ? '0.15' : '1');
+    if(isHL) path.style.filter = 'drop-shadow(0 0 3px rgba(122,46,46,0.6))';
 
     if(e.type === 'commentary'){
       const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
       const pts = subdivideElbow(p1, p2, p3, p4, 5);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
-      path.setAttribute('stroke-width', 1.8);
+      path.setAttribute('stroke-width', 1.8 * widthMul);
 
       const markerId = 'arrow-' + e.id;
       const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
@@ -1785,7 +2236,7 @@ function render(){
       const pts = subdivideElbow(p1, p2, p3, p4, 14);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
-      path.setAttribute('stroke-width', 1.2);
+      path.setAttribute('stroke-width', 1.2 * widthMul);
 
       const markerId = 'star-' + e.id;
       const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
@@ -1807,27 +2258,34 @@ function render(){
     } else {
       const d = `M ${acx} ${ay} L ${acx} ${ymid} L ${bcx} ${ymid} L ${bcx} ${by}`;
       path.setAttribute('d', d);
-      path.setAttribute('stroke-width', style.width);
+      path.setAttribute('stroke-width', style.width * widthMul);
       if(style.dash !== 'none') path.setAttribute('stroke-dasharray', style.dash);
     }
 
-    path.style.pointerEvents = 'stroke';
-    path.style.cursor = 'pointer';
-    path.onclick = () => {
-      if(confirm('Remove this connection?')){
-        state.edges = state.edges.filter(x => x.id !== e.id);
-        saveState();
-        render();
-      }
-    };
+    if(isAdmin){
+      path.style.pointerEvents = 'stroke';
+      path.style.cursor = 'pointer';
+      path.onclick = () => {
+        if(confirm('Remove this connection?')){
+          state.edges = state.edges.filter(x => x.id !== e.id);
+          saveState();
+          render();
+        }
+      };
+    } else {
+      path.style.pointerEvents = 'none';
+    }
     svg.appendChild(path);
   });
+
+  renderPopups();
 }
 
 document.addEventListener('click', (ev) => {
-  if(ev.target.closest('.node') || ev.target.closest('#menu') || ev.target.closest('#toolbar')) return;
+  if(ev.target.closest('.node') || ev.target.closest('#menu') || ev.target.closest('#toolbar') || ev.target.closest('#notesPopups') || ev.target.closest('.export-overlay')) return;
   hideMenu();
-});
+  closeNotesPopup();
+}, true);
 
 document.getElementById('canvas-wrap').addEventListener('wheel', (ev) => {
   if(!(ev.ctrlKey || ev.metaKey)) return;
@@ -1835,6 +2293,7 @@ document.getElementById('canvas-wrap').addEventListener('wheel', (ev) => {
   if(ev.deltaY < 0) zoomIn(); else zoomOut();
 }, { passive: false });
 
+initAdminMode();
 buildTimeline();
 loadState().then(applyZoom);
 </script>
