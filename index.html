@@ -100,7 +100,7 @@
 
   #canvas{
     position:relative;
-    width:7400px;
+    width:8300px;
     height:7600px;
     transform-origin:0 0;
     background-image:
@@ -111,7 +111,7 @@
   svg#lines{
     position:absolute;
     top:0; left:0;
-    width:7400px;
+    width:8300px;
     height:7600px;
     pointer-events:none;
   }
@@ -119,7 +119,7 @@
   #timeline{
     position:absolute;
     top:0; left:0;
-    width:7400px;
+    width:8300px;
     height:7600px;
     pointer-events:none;
     z-index:1;
@@ -1593,6 +1593,45 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  if(!state._v3FixMukhtaarMustalkhasOverlap){
+    // These two ended up nearly on top of each other in the hand-tuned layout; nudge one down.
+    const m = state.nodes.find(n => n.id === 'mustalkhas');
+    if(m) m.y += 130;
+    state._v3FixMukhtaarMustalkhasOverlap = true;
+    changed = true;
+  }
+
+  if(!state._v3IsolatedBooksToRight){
+    // Park every book with no connections in its own grid on the far right of its century
+    // row. ISOLATED_ZONE_X sits past the highest x any connected book reaches, and edge
+    // paths never extend past their two endpoint x-positions, so this can never cross a line.
+    const connectedIds = new Set();
+    state.edges.forEach(e => { connectedIds.add(e.from); connectedIds.add(e.to); });
+
+    const ISOLATED_ZONE_X = 5700;
+    const ISOLATED_COLS = 4;
+    const ISOLATED_COL_WIDTH = 440;
+    const ISOLATED_ROW_HEIGHT = 100;
+
+    const countByRow = {};
+    state.nodes
+      .filter(n => n.type !== 'combine' && !connectedIds.has(n.id))
+      .forEach(n => {
+        const row = Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
+        const idx = countByRow[row] || 0;
+        countByRow[row] = idx + 1;
+
+        const col = idx % ISOLATED_COLS;
+        const subRow = Math.floor(idx / ISOLATED_COLS);
+
+        n.x = ISOLATED_ZONE_X + col * ISOLATED_COL_WIDTH;
+        n.y = CENTURY_START_Y + row * CENTURY_HEIGHT + 20 + subRow * ISOLATED_ROW_HEIGHT;
+      });
+
+    state._v3IsolatedBooksToRight = true;
+    changed = true;
+  }
+
   state.nodes.forEach(n => {
     if(n.type !== 'combine' && !n.color){
       n.color = nextColor();
@@ -1674,7 +1713,7 @@ function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (7400 * zoom) + 'px';
+  sizer.style.width = (8300 * zoom) + 'px';
   sizer.style.height = (7600 * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
