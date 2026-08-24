@@ -286,6 +286,7 @@
   #menu button:last-child{margin-bottom:0;}
 
   body:not(.admin) .admin-only{ display:none !important; }
+  body.admin .viewer-only{ display:none !important; }
 
   #notesPopups{
     position:fixed;
@@ -513,6 +514,10 @@
       <div id="searchResults" class="search-results"></div>
     </div>
 
+    <div class="viewer-only">
+      <button class="secondary" onclick="enterAdminMode()">🔓 Enter edit mode</button>
+    </div>
+
     <div class="admin-only" style="display:flex;align-items:center;gap:10px;">
       <input type="text" id="bookName" placeholder="اسم الكتاب / Book name" onkeydown="if(event.key==='Enter')addBook()">
       <button onclick="addBook()">+ Add book</button>
@@ -732,6 +737,16 @@ async function loadPublishedNotes(){
     });
     if(changed) render();
   }catch(e){ /* offline, or notes.json not reachable (e.g. running from a plain file://) — ignore */ }
+}
+
+function enterAdminMode(){
+  const val = prompt('Enter edit key:');
+  if(val === null) return;
+  if(val.trim() !== ADMIN_KEY) return;
+  localStorage.setItem(ADMIN_FLAG_KEY, '1');
+  isAdmin = true;
+  document.body.classList.add('admin');
+  render();
 }
 
 function exitAdminMode(){
