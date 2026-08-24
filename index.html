@@ -358,6 +358,12 @@
     font-size:12.5px;
     padding:6px 12px;
   }
+  .popup-status{
+    margin-top:6px;
+    font-size:11.5px;
+    color:#6b5d4f;
+    font-style:italic;
+  }
   .popup-conn-header{
     margin-top:12px;
     font-size:12px;
@@ -468,6 +474,7 @@
     </div>
 
     <div class="admin-only" style="display:flex;align-items:center;gap:8px;">
+      <button class="secondary" onclick="setGithubToken()">🔑 GitHub token</button>
       <button class="secondary" onclick="exportState()">⭳ Export</button>
       <button class="secondary" onclick="exitAdminMode()">Exit edit mode</button>
     </div>
@@ -549,6 +556,117 @@ function initAdminMode(){
     isAdmin = localStorage.getItem(ADMIN_FLAG_KEY) === '1';
   }catch(e){ isAdmin = false; }
   document.body.classList.toggle('admin', isAdmin);
+}
+
+const GH_TOKEN_KEY = 'hanafi-book-network:ghToken';
+const GH_REPO = 'ARK120701/hanafi-book-network';
+const GH_NOTES_PATH = 'notes.json';
+let publishStatus = {}; // transient, not persisted: { 'nodeId:field': 'status message' }
+
+function b64EncodeUtf8(str){
+  const bytes = new TextEncoder().encode(str);
+  let binary = '';
+  for(let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary);
+}
+
+function b64DecodeUtf8(b64){
+  const binary = atob(b64);
+  const bytes = new Uint8Array(binary.length);
+  for(let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return new TextDecoder().decode(bytes);
+}
+
+function setGithubToken(){
+  if(!isAdmin) return;
+  const hasToken = !!localStorage.getItem(GH_TOKEN_KEY);
+  const val = prompt(
+    (hasToken ? 'A GitHub token is already saved in this browser.\n' : '') +
+    'Paste a GitHub personal access token (fine-grained, scoped to just this repo, with "Contents: Read and write" permission) to enable auto-publishing notes.\nLeave blank and submit to remove the saved token.'
+  );
+  if(val === null) return;
+  const trimmed = val.trim();
+  if(!trimmed){
+    localStorage.removeItem(GH_TOKEN_KEY);
+    alert('GitHub token removed from this browser.');
+    return;
+  }
+  localStorage.setItem(GH_TOKEN_KEY, trimmed);
+  alert('GitHub token saved in this browser. Notes you save will now publish automatically.');
+}
+
+async function publishNoteField(nodeId, field, value){
+  const token = localStorage.getItem(GH_TOKEN_KEY);
+  if(!token) return { ok:false, message:'No GitHub token set.' };
+  try{
+    const apiUrl = `https://api.github.com/repos/${GH_REPO}/contents/${GH_NOTES_PATH}`;
+    const getRes = await fetch(apiUrl, { headers: { 'Authorization':'token ' + token, 'Accept':'application/vnd.github+json' } });
+    let sha, notesData = {};
+    if(getRes.ok){
+      const getJson = await getRes.json();
+      sha = getJson.sha;
+      notesData = JSON.parse(b64DecodeUtf8(getJson.content.replace(/\n/g, '')));
+    } else if(getRes.status !== 404){
+      throw new Error('Could not read notes.json (HTTP ' + getRes.status + ')');
+    }
+
+    if(!notesData[nodeId]) notesData[nodeId] = {};
+    notesData[nodeId][field] = value;
+
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': 'token ' + token,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: 'Update notes for ' + nodeId + ' (' + field + ')',
+        content: b64EncodeUtf8(JSON.stringify(notesData, null, 2)),
+        sha
+      })
+    });
+
+    if(!putRes.ok){
+      const errJson = await putRes.json().catch(() => ({}));
+      throw new Error(errJson.message || ('GitHub API error ' + putRes.status));
+    }
+
+    return { ok:true, message:'Published — live for everyone within about a minute.' };
+  }catch(e){
+    return { ok:false, message:'Failed to publish: ' + e.message };
+  }
+}
+
+async function saveAndPublishNote(nodeId, field, value){
+  const node = state.nodes.find(n => n.id === nodeId);
+  if(!node) return;
+  node[field] = value;
+  saveState();
+  const key = nodeId + ':' + field;
+  const hasToken = !!localStorage.getItem(GH_TOKEN_KEY);
+  publishStatus[key] = hasToken ? 'Publishing…' : 'Saved in this browser only — set a GitHub token (toolbar) to publish it for everyone.';
+  render();
+  if(!hasToken) return;
+  const result = await publishNoteField(nodeId, field, value);
+  publishStatus[key] = result.message;
+  render();
+}
+
+async function loadPublishedNotes(){
+  try{
+    const res = await fetch('notes.json', { cache: 'no-store' });
+    if(!res.ok) return;
+    const data = await res.json();
+    let changed = false;
+    Object.keys(data).forEach(id => {
+      const n = state.nodes.find(x => x.id === id);
+      if(!n) return;
+      if(typeof data[id].bookNotes === 'string'){ n.bookNotes = data[id].bookNotes; changed = true; }
+      if(typeof data[id].authorNotes === 'string'){ n.authorNotes = data[id].authorNotes; changed = true; }
+    });
+    if(changed) render();
+  }catch(e){ /* offline, or notes.json not reachable (e.g. running from a plain file://) — ignore */ }
 }
 
 function exitAdminMode(){
@@ -1854,8 +1972,15 @@ function buildPopup(opts){
     const saveBtn = document.createElement('button');
     saveBtn.className = 'popup-save';
     saveBtn.textContent = 'Save notes';
-    saveBtn.onclick = () => { opts.onSave(textarea.value); render(); };
+    saveBtn.onclick = () => { opts.onSave(textarea.value); };
     box.appendChild(saveBtn);
+
+    if(opts.statusKey && publishStatus[opts.statusKey]){
+      const status = document.createElement('div');
+      status.className = 'popup-status';
+      status.textContent = publishStatus[opts.statusKey];
+      box.appendChild(status);
+    }
   } else {
     const p = document.createElement('div');
     p.className = 'notes-readonly';
@@ -1912,7 +2037,8 @@ function renderPopups(){
     subtitle: lines[1] || '',
     notesValue: node.bookNotes || '',
     placeholder: 'Notes about this book...',
-    onSave: (val) => { node.bookNotes = val; saveState(); },
+    statusKey: node.id + ':bookNotes',
+    onSave: (val) => saveAndPublishNote(node.id, 'bookNotes', val),
     connections: isAdmin ? getConnectionsFor(node.id) : null
   }));
 
@@ -1921,7 +2047,8 @@ function renderPopups(){
     subtitle: '',
     notesValue: node.authorNotes || '',
     placeholder: 'Notes about the author...',
-    onSave: (val) => { node.authorNotes = val; saveState(); },
+    statusKey: node.id + ':authorNotes',
+    onSave: (val) => saveAndPublishNote(node.id, 'authorNotes', val),
     connections: null
   }));
 }
@@ -2295,7 +2422,7 @@ document.getElementById('canvas-wrap').addEventListener('wheel', (ev) => {
 
 initAdminMode();
 buildTimeline();
-loadState().then(applyZoom);
+loadState().then(() => { applyZoom(); loadPublishedNotes(); });
 </script>
 
 </body>
