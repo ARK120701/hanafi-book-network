@@ -1,0 +1,1843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Hanafi Book Network</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
+
+  :root{
+    --parchment:#f3ead9;
+    --parchment-deep:#e9dcc2;
+    --ink:#2b2320;
+    --maroon:#7a2e2e;
+    --gold:#a6763f;
+    --line:#8a7355;
+  }
+
+  *{box-sizing:border-box;}
+
+  html,body{margin:0;padding:0;}
+
+  body{
+    min-height:100vh;
+    background:var(--parchment);
+    font-family:'Cairo', sans-serif;
+    color:var(--ink);
+  }
+
+  #toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:center;
+    padding:14px 18px;
+    background:var(--parchment-deep);
+    border-bottom:1.5px solid var(--line);
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+
+  #toolbar input[type=text]{
+    font-family:'Amiri', serif;
+    font-size:15px;
+    padding:8px 12px;
+    border:1.5px solid var(--line);
+    border-radius:5px;
+    background:#fffaf0;
+    color:var(--ink);
+    min-width:220px;
+  }
+
+  button{
+    font-family:'Cairo', sans-serif;
+    font-size:13.5px;
+    font-weight:600;
+    padding:8px 14px;
+    border-radius:5px;
+    border:1.5px solid var(--maroon);
+    background:var(--maroon);
+    color:#fff8ee;
+    cursor:pointer;
+  }
+  button.secondary{
+    background:transparent;
+    color:var(--maroon);
+  }
+  button:hover{opacity:0.88;}
+
+  .legend{
+    display:flex;
+    gap:18px;
+    margin-inline-start:auto;
+    font-size:12.5px;
+    color:#6b5d4f;
+    align-items:center;
+  }
+  .legend-item{display:flex;align-items:center;gap:6px;}
+  .swatch{width:28px;height:0;border-top-width:3px;border-top-style:solid;}
+
+  #hint{
+    padding:8px 18px;
+    font-size:13px;
+    color:#6b5d4f;
+    background:#fffaf0;
+    border-bottom:1px solid var(--line);
+    min-height:18px;
+  }
+
+  #canvas-wrap{
+    position:relative;
+    width:100%;
+    height:calc(100vh - 108px);
+    overflow:auto;
+  }
+
+  #zoom-sizer{
+    position:relative;
+  }
+
+  #canvas{
+    position:relative;
+    width:7000px;
+    height:7600px;
+    transform-origin:0 0;
+    background-image:
+      radial-gradient(circle at 20% 15%, rgba(166,118,63,0.06), transparent 40%),
+      radial-gradient(circle at 80% 85%, rgba(122,46,46,0.05), transparent 45%);
+  }
+
+  svg#lines{
+    position:absolute;
+    top:0; left:0;
+    width:7000px;
+    height:7600px;
+    pointer-events:none;
+  }
+
+  #timeline{
+    position:absolute;
+    top:0; left:0;
+    width:7000px;
+    height:7600px;
+    pointer-events:none;
+    z-index:1;
+  }
+  .century-row{
+    position:absolute;
+    left:0;
+    width:100%;
+    border-top:1.5px dashed rgba(138,115,85,0.4);
+  }
+  .century-label{
+    position:absolute;
+    left:14px;
+    font-family:'Amiri', serif;
+    font-weight:700;
+    font-size:15px;
+    color:var(--gold);
+    background:rgba(243,234,217,0.9);
+    padding:3px 10px;
+    border:1px solid rgba(138,115,85,0.35);
+    border-radius:5px;
+    white-space:nowrap;
+    line-height:1.5;
+  }
+  .century-label .en{
+    display:block;
+    font-family:'Cairo', sans-serif;
+    font-weight:600;
+    font-style:italic;
+    font-size:11px;
+    color:#6b5d4f;
+  }
+
+  .node{
+    position:absolute;
+    font-family:'Amiri', serif;
+    font-weight:700;
+    font-size:16px;
+    background:linear-gradient(180deg,#fffaf0,var(--parchment-deep));
+    border:1.5px solid var(--line);
+    border-radius:6px;
+    padding:10px 18px;
+    text-align:center;
+    box-shadow:0 2px 6px rgba(43,35,32,0.12);
+    cursor:grab;
+    user-select:none;
+    white-space:nowrap;
+    z-index:5;
+  }
+  .node.selected{
+    border-color:var(--maroon);
+    box-shadow:0 0 0 3px rgba(122,46,46,0.25);
+  }
+  .node.multiselect{
+    border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(166,118,63,0.3);
+  }
+  .node.combine{
+    width:22px;
+    height:22px;
+    padding:0;
+    border-radius:50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:700;
+    color:#8a7355;
+    background:#fffaf0;
+    border:1.5px solid #8a7355;
+  }
+  .node.manuscript{
+    border-color:#a31d1d;
+    background:linear-gradient(180deg,#fff1ef,#fad4d0);
+    box-shadow:0 0 0 2px rgba(163,29,29,0.22);
+  }
+  .node .ms-toggle{
+    position:absolute;
+    top:-9px; left:-9px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:#fffaf0;
+    border:1.5px solid #a31d1d;
+    color:#a31d1d;
+    font-size:10px;
+    font-weight:700;
+    line-height:17px;
+    text-align:center;
+    cursor:pointer;
+    display:none;
+  }
+  .node:hover .ms-toggle{display:block;}
+  .node.manuscript .ms-toggle{display:block;background:#a31d1d;color:#fff8ee;}
+
+  .node .color-toggle{
+    position:absolute;
+    bottom:-9px; left:-9px;
+    width:18px; height:18px;
+    border-radius:50%;
+    border:1.5px solid #fff8ee;
+    box-shadow:0 0 0 1px var(--line);
+    cursor:pointer;
+    display:none;
+  }
+  .node:hover .color-toggle{display:block;}
+
+  .node .color-text-toggle{
+    position:absolute;
+    bottom:-9px; right:-9px;
+    width:20px; height:20px;
+    border-radius:50%;
+    background:#fffaf0;
+    border:1.5px solid var(--line);
+    color:var(--ink);
+    font-size:11px;
+    font-weight:700;
+    line-height:17px;
+    text-align:center;
+    cursor:pointer;
+    display:none;
+  }
+  .node:hover .color-text-toggle{display:block;}
+  .node .del{
+    position:absolute;
+    top:-9px; right:-9px;
+    width:18px; height:18px;
+    border-radius:50%;
+    background:var(--maroon);
+    color:#fff8ee;
+    font-size:11px;
+    line-height:18px;
+    text-align:center;
+    cursor:pointer;
+    display:none;
+  }
+  .node:hover .del{display:block;}
+
+  #menu{
+    position:fixed;
+    display:none;
+    background:#fffaf0;
+    border:1.5px solid var(--line);
+    border-radius:8px;
+    box-shadow:0 6px 18px rgba(43,35,32,0.25);
+    padding:8px;
+    z-index:50;
+    font-size:13.5px;
+  }
+  #menu button{
+    display:block;
+    width:100%;
+    margin-bottom:6px;
+    text-align:right;
+    background:transparent;
+    color:var(--ink);
+    border:1px solid var(--line);
+  }
+  #menu button:last-child{margin-bottom:0;}
+</style>
+</head>
+<body>
+
+  <div id="toolbar">
+    <input type="text" id="bookName" placeholder="اسم الكتاب / Book name" onkeydown="if(event.key==='Enter')addBook()">
+    <button onclick="addBook()">+ Add book</button>
+    <button id="combineBtn" class="secondary" onclick="toggleCombineMode()">⊕ Combine books</button>
+    <button class="secondary" onclick="clearSelection()">Cancel selection</button>
+    <button class="secondary" onclick="resetAll()">Reset board</button>
+
+    <div style="display:flex;align-items:center;gap:6px;margin-inline-start:12px;">
+      <button class="secondary" onclick="zoomOut()">−</button>
+      <span id="zoomLabel" style="font-size:13px;min-width:42px;text-align:center;">100%</span>
+      <button class="secondary" onclick="zoomIn()">+</button>
+      <button class="secondary" onclick="zoomReset()">Reset zoom</button>
+    </div>
+
+    <div id="selectedColorControl" style="display:none;align-items:center;gap:6px;margin-inline-start:12px;">
+      <span id="selectedColorName" style="font-size:13px;font-family:'Amiri',serif;font-weight:700;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      <input type="text" id="selectedColorInput" placeholder="#2f6f4f or teal" style="width:130px;padding:7px 10px;border:1.5px solid var(--line);border-radius:5px;background:#fffaf0;font-family:'Cairo',sans-serif;font-size:13px;" onkeydown="if(event.key==='Enter')applySelectedColor()">
+      <button onclick="applySelectedColor()">Set color</button>
+    </div>
+
+    <div class="legend">
+      <div class="legend-item">➤➤➤ Commentary — arrows</div>
+      <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dashed;"></span> Footnote — dashed</div>
+      <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dotted;border-top-width:4px;"></span> Summary — dotted</div>
+      <div class="legend-item">✦✦✦ Combined into</div>
+      <div class="legend-item"><span style="width:14px;height:14px;border-radius:50%;background:#a31d1d;display:inline-block;"></span> Manuscript (مخطوط)</div>
+      <div class="legend-item" style="font-style:italic;">Line color = the book it comes from</div>
+    </div>
+  </div>
+
+  <div id="hint">Click "Add book" to place a book. Click one book, then another, to connect them. Hover a book and click the small circle in its corner to mark it as a manuscript. Ctrl/Cmd + scroll to zoom.</div>
+
+  <div id="canvas-wrap">
+    <div id="zoom-sizer">
+      <div id="canvas">
+        <div id="timeline"></div>
+        <svg id="lines"></svg>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu">
+    <button onclick="makeEdge('commentary')">Commentary — bold line</button>
+    <button onclick="makeEdge('footnote')">Footnote — dashed line</button>
+    <button onclick="makeEdge('summary')">Summary — dotted line</button>
+    <button onclick="hideMenu()">Cancel</button>
+  </div>
+
+<script>
+// Fallback so this board also persists when opened outside Claude (e.g. GitHub Pages),
+// where window.storage isn't provided. Uses localStorage instead, scoped per-browser.
+if (!window.storage) {
+  window.storage = {
+    async get(key) {
+      const raw = localStorage.getItem('hanafi-book-network:' + key);
+      if (raw === null) return null;
+      return { key, value: raw, shared: false };
+    },
+    async set(key, value) {
+      localStorage.setItem('hanafi-book-network:' + key, value);
+      return { key, value, shared: false };
+    },
+    async delete(key) {
+      localStorage.removeItem('hanafi-book-network:' + key);
+      return { key, deleted: true, shared: false };
+    },
+    async list(prefix) {
+      const keys = Object.keys(localStorage)
+        .filter(k => k.startsWith('hanafi-book-network:' + (prefix || '')))
+        .map(k => k.replace('hanafi-book-network:', ''));
+      return { keys, shared: false };
+    }
+  };
+}
+
+let state = { nodes: [], edges: [] };
+let selected = null;
+let pendingPair = null;
+let dragInfo = null;
+let combineMode = false;
+let combineSet = new Set();
+let zoom = 1;
+const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
+const STORAGE_KEY = 'hanafi-book-network';
+
+async function loadState(){
+  try{
+    const res = await window.storage.get(STORAGE_KEY);
+    if(res && res.value){
+      state = JSON.parse(res.value);
+    }
+  }catch(e){ /* no saved state yet */ }
+
+  if(!state.nodes || state.nodes.length === 0){
+    seedDefaultState();
+  }
+  ensureExtraContent();
+  render();
+}
+
+function nodeExists(id){
+  return state.nodes.some(n => n.id === id);
+}
+
+function ensureExtraContent(){
+  let changed = false;
+
+  function addNode(n){
+    if(!nodeExists(n.id)){ state.nodes.push(n); changed = true; }
+  }
+  function addEdge(e){
+    const dupe = state.edges.some(x => x.from === e.from && x.to === e.to && x.type === e.type);
+    if(!dupe){ state.edges.push(e); changed = true; }
+  }
+
+  addNode({ id:'qudoori',   name:'مختصر القدوري\nMukhtaṣar al-Qudūrī',       x: 260,  y: 650 });
+  addNode({ id:'nasafimz',  name:'منظومة النسفي\nManẓūmat al-Nasafī',        x: 620,  y: 650 });
+  addNode({ id:'kanz',      name:'كنز الدقائق\nKanz al-Daqāʾiq',             x: 900,  y: 650 });
+  addNode({ id:'mukhtaar',  name:'المختار\nAl-Mukhtār',                     x: 1120, y: 650 });
+  addNode({ id:'wiqriwaya', name:'وقاية الرواية\nWiqāyat al-Riwāyah',        x: 1340, y: 650 });
+
+  addNode({ id:'plusBidaya',   name:'+', type:'combine', x: 340, y: 400 });
+  addNode({ id:'bidaya',       name:'بداية المبتدئ\nBidāyat al-Mubtadī',     x: 300, y: 470 });
+
+  addNode({ id:'plusMajma',    name:'+', type:'combine', x: 460, y: 780 });
+  addNode({ id:'majmabahrain', name:'مجمع البحرين\nMajmaʿ al-Baḥrayn',       x: 420, y: 850 });
+
+  addNode({ id:'plusMultaqa',  name:'+', type:'combine', x: 900, y: 780 });
+  addNode({ id:'multaqaabhur', name:'ملتقى الأبحر\nMultaqā al-Abḥur',        x: 860, y: 850 });
+
+  addNode({ id:'mabsutsharh',  name:'المبسوط شرح الكافي\nAl-Mabsūṭ Sharḥ al-Kāfī', x: 1080, y: 380 });
+
+  // Qudoori + Jaami' al-Sagheer -> Bidaayatul Mubtadi
+  addEdge({ id: uid(), from:'qudoori',  to:'plusBidaya', type:'merge' });
+  addEdge({ id: uid(), from:'jamisagh', to:'plusBidaya', type:'merge' });
+  addEdge({ id: uid(), from:'plusBidaya', to:'bidaya',   type:'merge' });
+
+  // Qudoori + Manzoomatun Nasafi -> Majmaul Bahrain
+  addEdge({ id: uid(), from:'qudoori', to:'plusMajma', type:'merge' });
+  addEdge({ id: uid(), from:'nasafimz', to:'plusMajma', type:'merge' });
+  addEdge({ id: uid(), from:'plusMajma', to:'majmabahrain', type:'merge' });
+
+  // Qudoori + Kanz Daqaaiq + Mukhtaar + Wiqaayatur Riwaayah -> Multaqul Abhur
+  addEdge({ id: uid(), from:'qudoori',   to:'plusMultaqa', type:'merge' });
+  addEdge({ id: uid(), from:'kanz',      to:'plusMultaqa', type:'merge' });
+  addEdge({ id: uid(), from:'mukhtaar',  to:'plusMultaqa', type:'merge' });
+  addEdge({ id: uid(), from:'wiqriwaya', to:'plusMultaqa', type:'merge' });
+  addEdge({ id: uid(), from:'plusMultaqa', to:'multaqaabhur', type:'merge' });
+
+  // Mabsoot is a commentary on Kaafi
+  addEdge({ id: uid(), from:'kafi', to:'mabsutsharh', type:'commentary' });
+
+  addNode({ id:'hidayah',    name:'الهداية\nAl-Hidāyah',                x: 900,  y: 610 });
+  addNode({ id:'fathqadir',  name:'فتح القدير\nFatḥ al-Qadīr',          x: 660,  y: 760 });
+  addNode({ id:'inaya',      name:'العناية\nAl-ʿInāyah',                x: 860,  y: 760 });
+  addNode({ id:'binaya',     name:'البناية\nAl-Bināyah',                x: 1060, y: 760 });
+  addNode({ id:'sharhhidayah', name:'شرح الهداية\nSharḥ al-Hidāyah',    x: 1260, y: 760 });
+
+  // Bidaayatul Mubtadi -> commentary -> Al-Hidaayah
+  addEdge({ id: uid(), from:'bidaya', to:'hidayah', type:'commentary' });
+
+  // Al-Hidaayah -> commentaries
+  addEdge({ id: uid(), from:'hidayah', to:'fathqadir', type:'commentary' });
+  addEdge({ id: uid(), from:'hidayah', to:'inaya', type:'commentary' });
+  addEdge({ id: uid(), from:'hidayah', to:'binaya', type:'commentary' });
+  addEdge({ id: uid(), from:'hidayah', to:'sharhhidayah', type:'commentary' });
+
+  // --- Kanz al-Daqaaiq chain ---
+  addNode({ id:'waafi',        name:'الوافي\nAl-Wāfī',                              x:2200, y:850 });
+  addNode({ id:'kafi2',        name:'الكافي (شرح الوافي)\nAl-Kāfī (Sharḥ al-Wāfī)',   x:2200, y:1000 });
+  addNode({ id:'ramzhaqaiq',   name:'رمز الحقائق\nRamz al-Ḥaqāʾiq',                  x:1200, y:850 });
+  addNode({ id:'nahrfaiq',     name:'النهر الفائق\nAl-Nahr al-Fāʾiq',                x:1400, y:850 });
+  addNode({ id:'bahrraiq',     name:'البحر الرائق\nBaḥr al-Rāʾiq',                   x:1600, y:850 });
+  addNode({ id:'tabyinhaqaiq', name:'تبيين الحقائق\nTabyīn al-Ḥaqāʾiq',              x:1800, y:850 });
+  addNode({ id:'mustalkhas',   name:'مستخلص الحقائق\nMustakhlaṣ al-Ḥaqāʾiq',          x:2000, y:850 });
+  addNode({ id:'minhatkhaliq', name:'منحة الخالق\nMinḥat al-Khāliq',                 x:1600, y:1000 });
+
+  addEdge({ id: uid(), from:'kanz', to:'waafi', type:'summary' });
+  addEdge({ id: uid(), from:'waafi', to:'kafi2', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'ramzhaqaiq', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'nahrfaiq', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'bahrraiq', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'tabyinhaqaiq', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'mustalkhas', type:'commentary' });
+  addEdge({ id: uid(), from:'bahrraiq', to:'minhatkhaliq', type:'footnote' });
+
+  // --- Mukhtasar al-Tahaawi ---
+  addNode({ id:'mukhtasartahawi',      name:'مختصر الطحاوي\nMukhtaṣar al-Ṭaḥāwī',                        x:200, y:1050 });
+  addNode({ id:'sharhtahawijassas',    name:'شرح مختصر الطحاوي للجصاص\nSharḥ Mukhtaṣar al-Ṭaḥāwī li\'l-Jaṣṣāṣ',    x:80,  y:1200 });
+  addNode({ id:'sharhtahawiisbijabi',  name:'شرح مختصر الطحاوي للإسبيجابي\nSharḥ Mukhtaṣar al-Ṭaḥāwī li\'l-Isbījābī', x:380, y:1200 });
+
+  addEdge({ id: uid(), from:'mukhtasartahawi', to:'sharhtahawijassas', type:'commentary' });
+  addEdge({ id: uid(), from:'mukhtasartahawi', to:'sharhtahawiisbijabi', type:'commentary' });
+
+  // --- Al-Mukhtaar ---
+  addNode({ id:'ikhtiyar', name:'الاختيار لتعليل المختار\nAl-Ikhtiyār li-Taʿlīl al-Mukhtār', x:1720, y:1000 });
+  addEdge({ id: uid(), from:'mukhtaar', to:'ikhtiyar', type:'commentary' });
+
+  // --- Qudoori ---
+  addNode({ id:'tuhfatfuqaha',   name:'تحفة الفقهاء\nTuḥfat al-Fuqahāʾ',           x:150, y:1400 });
+  addNode({ id:'badaisanai',     name:'بدائع الصنائع\nBadāʾiʿ al-Ṣanāʾiʿ',          x:150, y:1550 });
+  addNode({ id:'lubab',          name:'اللباب في شرح الكتاب\nAl-Lubāb fī Sharḥ al-Kitāb', x:350, y:1400 });
+  addNode({ id:'jawharanayyira', name:'الجوهرة النيرة\nAl-Jawharah al-Nayyirah',   x:550, y:1400 });
+
+  addEdge({ id: uid(), from:'qudoori', to:'tuhfatfuqaha', type:'commentary' });
+  addEdge({ id: uid(), from:'tuhfatfuqaha', to:'badaisanai', type:'commentary' });
+  addEdge({ id: uid(), from:'qudoori', to:'lubab', type:'commentary' });
+  addEdge({ id: uid(), from:'qudoori', to:'jawharanayyira', type:'commentary' });
+
+  // --- Wiqaayatur Riwaayah ---
+  addNode({ id:'nuqayah',      name:'النقاية\nAl-Nuqāyah',                 x:1940, y:1000 });
+  addNode({ id:'fathbabinaya', name:'فتح باب العناية\nFatḥ Bāb al-ʿInāyah', x:1800, y:1150 });
+  addNode({ id:'jamirumuz',    name:'جامع الرموز\nJāmiʿ al-Rumūz',         x:2080, y:1150 });
+  addNode({ id:'sharhwiqaya',  name:'شرح الوقاية\nSharḥ al-Wiqāyah',       x:2350, y:1000 });
+  addNode({ id:'umdatriaya',   name:'عمدة الرعاية\nʿUmdat al-Riʿāyah',      x:2350, y:1150 });
+
+  addEdge({ id: uid(), from:'wiqriwaya', to:'nuqayah', type:'summary' });
+  addEdge({ id: uid(), from:'nuqayah', to:'fathbabinaya', type:'commentary' });
+  addEdge({ id: uid(), from:'nuqayah', to:'jamirumuz', type:'commentary' });
+  addEdge({ id: uid(), from:'wiqriwaya', to:'sharhwiqaya', type:'commentary' });
+  addEdge({ id: uid(), from:'sharhwiqaya', to:'umdatriaya', type:'footnote' });
+
+  // --- Tanwir al-Absaar / Durr al-Mukhtaar ---
+  addNode({ id:'tanwirabsar',       name:'تنوير الأبصار\nTanwīr al-Abṣār',                          x:2650, y:1000 });
+  addNode({ id:'durrmukhtar',       name:'الدر المختار\nAl-Durr al-Mukhtār',                         x:2650, y:1150 });
+  addNode({ id:'ibnabidin',         name:'ابن عابدين (رد المحتار)\nIbn ʿĀbidīn (Radd al-Muḥtār)',     x:2450, y:1300 });
+  addNode({ id:'tahtawifootnote',   name:'الطحطاوي\nAl-Ṭaḥṭāwī',                                     x:2650, y:1300 });
+  addNode({ id:'halabi',            name:'حاشية الحلبي\nḤāshiyat al-Ḥalabī',                          x:2850, y:1300 });
+  addNode({ id:'sharhminhatghaffar',name:'شرح منحة الغفار\nSharḥ Minḥat al-Ghaffār',                  x:2550, y:1450 });
+  addNode({ id:'tawaliuanwar',      name:'طوالع الأنوار\nṬawāliʿ al-Anwār',                            x:2800, y:1450 });
+
+  addEdge({ id: uid(), from:'tanwirabsar', to:'durrmukhtar', type:'commentary' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'ibnabidin', type:'footnote' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'tahtawifootnote', type:'footnote' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'halabi', type:'footnote' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'sharhminhatghaffar', type:'commentary' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'tawaliuanwar', type:'commentary' });
+
+  // --- Full book list import: books not yet on the board ---
+    addNode({ id:'ikhtilaf', name:'اختلاف أبي حنيفة وابن أبي ليلى\nIkhtilāf Abī Ḥanīfa wa Ibn Abī Laylā', x:80, y:505, author:'الإمام أبو يوسف (d. 182H)' });
+    addNode({ id:'islahidah', name:'الإصلاح وشرحه الإيضاح\nAl-Iṣlāḥ wa Sharḥuhu al-Īḍāḥ', x:80, y:4105, author:'ابن كمال باشا (d. 940H)' });
+    addNode({ id:'amali', name:'الأمالي\nAl-Amālī', x:500, y:505, author:'الإمام أبو يوسف (d. 182H)' });
+    addNode({ id:'burhanmawahib', name:'البرهان شرح مواهب الرحمن\nAl-Burhān Sharḥ Mawāhib al-Raḥmān', x:500, y:4105, author:'إبراهيم الطرابلسي (d. 922H)' });
+    addNode({ id:'tajrid', name:'التجريد\nAl-Tajrīd', x:80, y:1855, author:'الإمام القدوري (d. 428H)' });
+    addNode({ id:'tahrirjamikab', name:'التحرير في شرح الجامع الكبير\nAl-Taḥrīr fī Sharḥ al-Jāmiʿ al-Kabīr', x:290, y:2755, author:'جمال الدين الحصيري (d. 636H)' });
+    addNode({ id:'tuhfatmuluk', name:'تحفة الملوك\nTuḥfat al-Mulūk', x:500, y:2755, author:'زين الدين الرازي (d. 666H)' });
+    addNode({ id:'tashihtarjih', name:'التصحيح والترجيح على مختصر القدوري\nAl-Taṣḥīḥ wa al-Tarjīḥ ʿalā Mukhtaṣar al-Qudūrī', x:290, y:3655, author:'قاسم بن قطلوبغا (d. 879H)' });
+    addNode({ id:'tayinqawl', name:'تعيين القوال الراجح في مسائل الهداية\nTaʿyīn al-Qawl al-Rājiḥ fī Masāʾil al-Hidāyah', x:80, y:6805, author:'غلام قادر النعماني' });
+    addNode({ id:'tafsilaqd', name:'تفصيل عقد الفرائد بتكميل قيد الشرائد\nTafṣīl ʿAqd al-Farāʾid bi-Takmīl Qayd al-Sharāʾid', x:710, y:4105, author:'سري الدين بن الشحنة (d. 921H)' });
+    addNode({ id:'tanbihmushkilat', name:'التنبيه علي مشكلات الهداية\nAl-Tanbīh ʿalā Mushkilāt al-Hidāyah', x:290, y:3205, author:'صدر الدين ابن أبي العز (d. 792H)' });
+    addNode({ id:'tanbihtakhrij', name:'التنبيه على تخريج أحاديث الهداية والخلاصة\nAl-Tanbīh ʿalā Takhrīj Aḥādīth al-Hidāyah wa al-Khulāṣah', x:500, y:3205, author:'علاء الدين ابن التركماني (d. 750H)' });
+    addNode({ id:'taysirmaqasid', name:'تيسير المقاصد شرح نظم الفوائد\nTaysīr al-Maqāṣid Sharḥ Naẓm al-Fawāʾid', x:290, y:4555, author:'حسن بن عمار الشرنبلالي (d. 1069H)' });
+    addNode({ id:'jamifusulayn', name:'جامع الفصولين\nJāmiʿ al-Fuṣūlayn', x:500, y:3655, author:'ابن قاضي سماوة (d. 823H)' });
+    addNode({ id:'jamifatawa', name:'جامع الفتاوى\nJāmiʿ al-Fatāwā', x:710, y:3655, author:'قرق أمير الحميدي الرومي (d. 860H)' });
+    addNode({ id:'jurjaniyyat', name:'الجرجانيات\nAl-Jurjāniyyāt', x:1130, y:505, author:'محمد بن الحسن الشيباني (d. 189H)' });
+    addNode({ id:'haqaiqmanzuma', name:'حقائق المنظومة\nḤaqāʾiq al-Manẓūmah', x:710, y:2755, author:'أبو المحامد محمود البخاري (d. 671H)' });
+    addNode({ id:'hashiyasadi', name:'حاشية سعدي چلبي على العناية والهداية\nḤāshiyat Saʿdī Chalabī ʿalā al-ʿInāyah wa al-Hidāyah', x:1130, y:4105, author:'المفتي سعد الله بن عيسي (d. 945H)' });
+    addNode({ id:'hashiyahidaya', name:'حاشية على الهداية\nḤāshiyah ʿalā al-Hidāyah', x:920, y:2755, author:'عمر بن محمد الخبازي (d. 691H)' });
+    addNode({ id:'hilbatmujalli', name:'حلبة المجلي وبغية المهتدي\nḤilbat al-Mujallī wa Bughyat al-Muhtadī', x:920, y:3655, author:'ابن أمير الحاج (d. 879H)' });
+    addNode({ id:'tahtawimaraqi', name:'حاشية الطحطاوي على مراقي الفلاح\nḤāshiyat al-Ṭaḥṭāwī ʿalā Marāqī al-Falāḥ', x:290, y:5455, author:'الشيخ أحمد الطحطاوي (d. 1231H)' });
+    addNode({ id:'kharaj', name:'الخراج\nAl-Kharāj', x:1340, y:505, author:'الإمام أبو يوسف (d. 182H)' });
+    addNode({ id:'khulasadalail', name:'خلاصة الدلائل في تنقيح المسائل\nKhulāṣat al-Dalāʾil fī Tanqīḥ al-Masāʾil', x:710, y:2305, author:'حسام الدين الرازي (d. 598H)' });
+    addNode({ id:'khulasafatawa', name:'خلاصة الفتاوى\nKhulāṣat al-Fatāwā', x:920, y:2305, author:'طاهر بن أحمد البخاري (d. 542H)' });
+    addNode({ id:'durrmuntaqa', name:'الدرّ المنتقى في شرح الملتقى\nAl-Durr al-Muntaqā fī Sharḥ al-Multaqā', x:500, y:4555, author:'علاء الدين الحصكفي (d. 1088H)' });
+    addNode({ id:'dirayah', name:'الدراية في تخريج أحاديث الهداية\nAl-Dirāyah fī Takhrīj Aḥādīth al-Hidāyah', x:1130, y:3655, author:'الحافظ ابن حجر العسقلاني (d. 852H)' });
+    addNode({ id:'dhakhiratuqba', name:'ذخيرة العقبى\nDhakhīrat al-ʿUqbā', x:1340, y:4105, author:'يوسف بن جنيد التوقاتي (d. 905H)' });
+    addNode({ id:'raddsiyarawzai', name:'الرد على سير الأوزاعي\nAl-Radd ʿalā Siyar al-Awzāʿī', x:1550, y:505, author:'الإمام أبو يوسف (d. 182H)' });
+    addNode({ id:'ruqayyat', name:'الرقيات\nAl-Ruqayyāt', x:1760, y:505, author:'محمد بن الحسن الشيباني (d. 189H)' });
+    addNode({ id:'ruusmasail', name:'رؤوس المسائل\nRuʾūs al-Masāʾil', x:1130, y:2305, author:'جار الله الزمخشري (d. 537H)' });
+    addNode({ id:'zubdatahkam', name:'زبدة الأحكام في مذاهب الأئمة الأربعة الأعلام\nZubdat al-Aḥkām fī Madhāhib al-Aʾimma al-Arbaʿa al-Aʿlām', x:920, y:3205, author:'سراج الدين الغزنوي (d. 773H)' });
+    addNode({ id:'sirajwahhaj', name:'السراج الوهّاج شرح القدوري\nAl-Sirāj al-Wahhāj Sharḥ al-Qudūrī', x:1130, y:3205, author:'أبو بكر الحدادي (d. 800H)' });
+    addNode({ id:'siaya', name:'السعاية في كشف ما في شرح الوقاية\nAl-Siʿāyah fī Kashf mā fī Sharḥ al-Wiqāyah', x:80, y:5905, author:'عبد الحي اللكنوي (d. 1304H)' });
+    addNode({ id:'siqaya', name:'السقاية لعطشان الهداية\nAl-Siqāyah li-ʿAṭshān al-Hidāyah', x:290, y:5905, author:'عبد الحي اللكنوي (d. 1304H)' });
+    addNode({ id:'sharhjamisagh1', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:1340, y:2305, author:'حسام الدين الصدر الشهيد (d. 536H)' });
+    addNode({ id:'sharhjamisagh2', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:290, y:1855, author:'فخر الإسلام البزدوي (d. 482H)' });
+    addNode({ id:'sharhjamisagh3', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:1550, y:2305, author:'تاج الدين الكردري (d. 562H)' });
+    addNode({ id:'sharhjamisagh4', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:1760, y:2305, author:'أبو القاسم أحمد العتابي (d. 586H)' });
+    addNode({ id:'sharhjamisagh5', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:80, y:2425, author:'حسن بن منصور قاضي خان (d. 592H)' });
+    addNode({ id:'sharhjamisagh6', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:290, y:2425, author:'حسام الدين الرازي (d. 598H)' });
+    addNode({ id:'sharhjamisagh7', name:'شرح الجامع الصغير\nSharḥ al-Jāmiʿ al-Ṣaghīr', x:500, y:5905, author:'عبد الحي اللكنوي (d. 1304H)' });
+    addNode({ id:'sharhziyadat1', name:'شرح الزيادات\nSharḥ al-Ziyādāt', x:500, y:2425, author:'أبو القاسم أحمد العتابي (d. 586H)' });
+    addNode({ id:'sharhziyadat2', name:'شرح الزيادات\nSharḥ al-Ziyādāt', x:710, y:2425, author:'حسن بن منصور قاضي خان (d. 592H)' });
+    addNode({ id:'sharhsiyarkab', name:'شرح السير الكبير\nSharḥ al-Siyar al-Kabīr', x:500, y:1855, author:'شمس الأئمة السرخسي (d. 483H)' });
+    addNode({ id:'sharhmukhtasarquduri', name:'شرح مختصر القدوري\nSharḥ Mukhtaṣar al-Qudūrī', x:710, y:1855, author:'أبو نصر أحمد الأقطع (d. 474H)' });
+    addNode({ id:'sharhmullamiskin', name:'شرح ملا مسكين على كنز الدقائق\nSharḥ Mullā Miskīn ʿalā Kanz al-Daqāʾiq', x:1550, y:4105, author:'ملا مسكين (d. 954H)' });
+    addNode({ id:'tariqatkhilaf', name:'طريقة الخلاف في الفقه بين الأئمة الأسلاف\nṬarīqat al-Khilāf fī al-Fiqh bayn al-Aʾimma al-Aslāf', x:1130, y:2755, author:'علاء الدين أبي الفتح الأسمندي' });
+    addNode({ id:'uqudduriyya', name:'العقود الدرية في تنقيح الفتاوى الحامدية\nAl-ʿUqūd al-Durriyyah fī Tanqīḥ al-Fatāwā al-Ḥāmidiyyah', x:710, y:5455, author:'ابن عابدين الشامي (d. 1252H)' });
+    addNode({ id:'uyunmadhahib', name:'عيون المذاهب في فروع المذاهب الأربعة\nʿUyūn al-Madhāhib fī Furūʿ al-Madhāhib al-Arbaʿa', x:1760, y:3205, author:'لقوام الدين الكاكي (d. 749H)' });
+    addNode({ id:'ghayatbayan', name:'غاية البيان ونادرة الزمان\nGhāyat al-Bayān wa Nādirat al-Zamān', x:80, y:3325, author:'أمير كاتب الإتقاني (d. 758H)' });
+    addNode({ id:'ghurarahkam', name:'غرر الأحكام وشرحه درر الحكام\nGhurar al-Aḥkām wa Sharḥuhu Durar al-Ḥukkām', x:1550, y:3655, author:'ملا خسرو (d. 885H)' });
+    addNode({ id:'ghunyatmutamalli', name:'غنية المتملي ومختصره\nGhunyat al-Mutamallī wa Mukhtaṣaruhu', x:1760, y:4105, author:'إبراهيم الحلبي (d. 956H)' });
+    addNode({ id:'fatawaanqarawiyya', name:'الفتاوى الأنقروية\nAl-Fatāwā al-Anqarawiyyah', x:1130, y:4555, author:'محمد بن حسن الأنقروي (d. 1098H)' });
+    addNode({ id:'fatawabazzaziyya', name:'الفتاوى البزازية\nAl-Fatāwā al-Bazzāziyyah', x:1760, y:3655, author:'حافظ الدين ابن البزاز (d. 827H)' });
+    addNode({ id:'fatawatatarkhaniyya', name:'الفتاوى التاتارخانية\nAl-Fatāwā al-Tātārkhāniyyah', x:290, y:3325, author:'فريد الدين عالم بن العلاء (d. 786H)' });
+    addNode({ id:'fatawatumurtashi', name:'فتاوى التمرتاشي\nFatāwā al-Tumurtāshī', x:1340, y:4555, author:'محمد بن عبد الله التمرتاشي (d. 1004H)' });
+    addNode({ id:'fatawakhayriyya', name:'الفتاوى الخيرية لنفع البرية\nAl-Fatāwā al-Khayriyyah li-Nafʿ al-Bariyyah', x:1550, y:4555, author:'خير الدين الرملي (d. 1081H)' });
+    addNode({ id:'fatawazayniyya', name:'الفتاوى الزينية\nAl-Fatāwā al-Zayniyyah', x:80, y:4225, author:'زين الدين ابن نجيم (d. 970H)' });
+    addNode({ id:'fatawasirajiyya', name:'الفتاوى السراجية\nAl-Fatāwā al-Sirājiyyah', x:1130, y:2425, author:'سراج الدين الأوشي (d. 569H)' });
+    addNode({ id:'fatawaqarihidaya', name:'فتاوى قارئ الهداية\nFatāwā Qāriʾ al-Hidāyah', x:80, y:3775, author:'قارئ الهداية (d. 829H)' });
+    addNode({ id:'fatawaqadikhan', name:'فتاوى قاضي خان\nFatāwā Qāḍī Khān', x:1340, y:2425, author:'حسن بن منصور قاضي خان (d. 592H)' });
+    addNode({ id:'fatawatarsusiyya', name:'الفتاوى الطَرَسُوسِيَة\nAl-Fatāwā al-Ṭarsūsiyyah', x:500, y:3325, author:'نجم الدين إبراهيم الطرسوسي (d. 758H)' });
+    addNode({ id:'fatawazahiriyya', name:'الفتاوى الظهيرية\nAl-Fatāwā al-Ẓahīriyyah', x:1340, y:2755, author:'ظهير الدين أبو بكر البخاري (d. 619H)' });
+    addNode({ id:'fatawaadliyya', name:'الفتاوى العدلية\nAl-Fatāwā al-ʿAdliyyah', x:290, y:4225, author:'رسول بن صالح الأيديني (d. 978H)' });
+    addNode({ id:'fatawalaknawi', name:'فتاوى اللكنوي\nFatāwā al-Laknawī', x:920, y:5905, author:'عبد الحي اللكنوي (d. 1304H)' });
+    addNode({ id:'fatawanazm', name:'الفتاوى النظم\nAl-Fatāwā al-Naẓm', x:1130, y:5905, author:'محمود بن محمد الحمزاوي (d. 1305H)' });
+    addNode({ id:'fatawawalwalijiyya', name:'الفتاوي الولوالجية\nAl-Fatāwā al-Walwālijiyyah', x:1550, y:2425, author:'ظهير الدين الولوالجي (d. 540H)' });
+    addNode({ id:'fatawahindiyya', name:'الفتاوى الهندية\nAl-Fatāwā al-Hindiyyah', x:1760, y:4555, author:'نظام الدين البرهانبوري وجماعة (d. 1080H)' });
+    addNode({ id:'fathallahmuin', name:'فتح الله المعين على شرح الكنز لملا مسكين\nFatḥ Allāh al-Muʿīn ʿalā Sharḥ al-Kanz li-Mullā Miskīn', x:80, y:5005, author:'أبو السعود محمد الأزهري (d. 1172H)' });
+    addNode({ id:'fusulusrushani', name:'فصول الأسروشني\nFuṣūl al-Usrūshanī', x:1550, y:2755, author:'محمد الأسروشني (d. 632H)' });
+    addNode({ id:'fiqhnafi', name:'الفقه النافع\nAl-Fiqh al-Nāfiʿ', x:1760, y:2425, author:'ناصر الدين السمرقندي (d. 556H)' });
+    addNode({ id:'fiqhmadhahibarbaa', name:'الفقه على المذاهب الأربعة\nAl-Fiqh ʿalā al-Madhāhib al-Arbaʿa', x:1340, y:5905, author:'عبد الرحمن الجزيري (d. 1360H)' });
+    addNode({ id:'fiqhislami', name:'الفقه الإسلامي وأدلته\nAl-Fiqh al-Islāmī wa Adillatuhu', x:80, y:6355, author:'الدكتور وهبة الزحيلي (d. 1436H)' });
+    addNode({ id:'fiqhhanafithawb', name:'الفقه الحنفي في ثوبه الجديد\nAl-Fiqh al-Ḥanafī fī Thawbihi al-Jadīd', x:290, y:6355, author:'عبد الحميد محمود طهماز (d. 1431H)' });
+    addNode({ id:'fiqhhanafiwaadilla', name:'الفقه الحنفي وأدلته\nAl-Fiqh al-Ḥanafī wa Adillatuhu', x:500, y:6355, author:'أسعد محمد الصاغرجي (d. 1436H)' });
+    addNode({ id:'fiqhhanafibiadilla', name:'الفقه الحنفي بأدلته\nAl-Fiqh al-Ḥanafī bi-Adillatihi', x:710, y:6355, author:'الأستاذ مصطفى ديب البغا' });
+    addNode({ id:'fiqhhanafimuyassar', name:'الفقه الحنفي الميسّر\nAl-Fiqh al-Ḥanafī al-Muyassar', x:920, y:6355, author:'الدكتور وهبة الزحيلي (d. 1436H)' });
+    addNode({ id:'fiqhmuyassar', name:'الفقه الميسّر\nAl-Fiqh al-Muyassar', x:1130, y:6355, author:'شفيق الرحمن الندوي' });
+    addNode({ id:'qurratuyun', name:'قرّة عيون الأخيار لتكملة رد المحتار\nQurrat ʿUyūn al-Akhyār li-Takmilat Radd al-Muḥtār', x:1550, y:5905, author:'علاء الدين ابن عابدين (d. 1306H)' });
+    addNode({ id:'kafifiqhhanafi', name:'الكافي في الفقه الحنفي\nAl-Kāfī fī al-Fiqh al-Ḥanafī', x:1340, y:6355, author:'وهبي سليمان غاوجي (d. 1434H)' });
+    addNode({ id:'kitabhujja', name:'كتاب الحجة على أهل المدينة\nKitāb al-Ḥujjah ʿalā Ahl al-Madīnah', x:710, y:625, author:'محمد بن الحسن الشيباني (d. 189H)' });
+    addNode({ id:'kitabmujarrad', name:'كتاب المجرّد\nKitāb al-Mujarrad', x:80, y:955, author:'حسن بن زياد اللؤلؤي (d. 204H)' });
+    addNode({ id:'kashfhaqaiq', name:'كشف الحقائق شرح كنز الدقائق\nKashf al-Ḥaqāʾiq Sharḥ Kanz al-Daqāʾiq', x:1760, y:5905, author:'عبد الحكيم الأفغاني (d. 1326H)' });
+    addNode({ id:'kifayahidaya', name:'الكفاية شرح الهداية\nAl-Kifāyah Sharḥ al-Hidāyah', x:710, y:3325, author:'جلال الدين الخوارزمي' });
+    addNode({ id:'kaysaniyyat', name:'الكيسانيات\nAl-Kaysāniyyāt', x:920, y:625, author:'محمد بن الحسن الشيباني (d. 189H)' });
+    addNode({ id:'majallatahkam', name:'مجلة الأحكام العدلية\nMajallat al-Aḥkām al-ʿAdliyyah', x:1130, y:5455, author:'لجنة تحت رئاسة أحمد جودت باشا (d. 1293H)' });
+    addNode({ id:'majmaanhur', name:'مجمع الأنهر في شرح ملتقى الأبحر\nMajmaʿ al-Anhur fī Sharḥ Multaqā al-Abḥur', x:290, y:4675, author:'عبد الرحمن الشيخي زاده (d. 1078H)' });
+    addNode({ id:'mukhtasarikhtilaf', name:'مختصر اختلاف العلماء\nMukhtaṣar Ikhtilāf al-ʿUlamāʾ', x:500, y:1405, author:'الإمام أبو بكر الجصاص (d. 370H)' });
+    addNode({ id:'muhitburhani', name:'المحيط البرهاني\nAl-Muḥīṭ al-Burhānī', x:80, y:2875, author:'برهان الدين ابن مازه (d. 616H)' });
+    addNode({ id:'mukhtasarkarkhi', name:'مختصر الكرخي\nMukhtaṣar al-Karkhī', x:920, y:1405, author:'أبو الحسن الكرخي (d. 340H)' });
+    addNode({ id:'maraqifalah', name:'مراقي الفلاح\nMarāqī al-Falāḥ', x:500, y:4675, author:'حسن بن عمار الشرنبلالي (d. 1069H)' });
+    addNode({ id:'masailbadriyya', name:'المسائل البدرية\nAl-Masāʾil al-Badriyyah', x:500, y:3775, author:'بدر الدين العيني (d. 855H)' });
+    addNode({ id:'mustasfa', name:'المستصفى\nAl-Mustaṣfā', x:1130, y:3325, author:'حافظ الدين النسفي (d. 710H)' });
+    addNode({ id:'musaffa', name:'المصفّى\nAl-Muṣaffā', x:1340, y:3325, author:'حافظ الدين النسفي (d. 710H)' });
+    addNode({ id:'mazharhaqaiq', name:'مظهر الحقائق الخفية من البحر الرائق\nMaẓhar al-Ḥaqāʾiq al-Khafiyyah min al-Baḥr al-Rāʾiq', x:710, y:4675, author:'خير الدين الرملي (d. 1081H)' });
+    addNode({ id:'muqaddimaghaznawiyya', name:'المقدّمة الغزنوية\nAl-Muqaddimah al-Ghaznawiyyah', x:80, y:2545, author:'أحمد الغزنوي (d. 593H)' });
+    addNode({ id:'multaqatfatwa', name:'الملتقط في الفتوى الحنفية\nAl-Multaqaṭ fī al-Fatwā al-Ḥanafiyyah', x:290, y:2545, author:'ناصر الدين السمرقندي (d. 556H)' });
+    addNode({ id:'mawsuafiqhiyya', name:'الموسوعة الفقهية الكويتيَّة\nAl-Mawsūʿah al-Fiqhiyyah al-Kuwaytiyyah', x:1550, y:6355, author:'لجنة من العلماء' });
+    addNode({ id:'muinmufti', name:'معين المفتي على جواب المستفتي\nMuʿīn al-Muftī ʿalā Jawāb al-Mustaftī', x:920, y:4675, author:'محمد بن عبد الله التمرتاشي (d. 1004H)' });
+    addNode({ id:'manbamajma', name:'المنبع في شرح المجمع\nAl-Manbaʿ fī Sharḥ al-Majmaʿ', x:1550, y:3325, author:'أبو العباس العينتابي (d. 767H)' });
+    addNode({ id:'minhatsuluk', name:'منحة السلوك في شرح تحفة الملوك\nMinḥat al-Sulūk fī Sharḥ Tuḥfat al-Mulūk', x:710, y:3775, author:'بدر الدين العيني (d. 855H)' });
+    addNode({ id:'manzumatibnwahban', name:'منظومة ابن وهبان\nManẓūmat Ibn Wahbān', x:1760, y:3325, author:'عبد الوهاب ابن وهبان (d. 768H)' });
+    addNode({ id:'munyatmusalli', name:'منية المصلي وغنية المبتدئ\nMunyat al-Muṣallī wa Ghunyat al-Mubtadī', x:80, y:3445, author:'سديد الدين الكاشغري (d. 705H)' });
+    addNode({ id:'munyatalmai', name:'منية الألمعي\nMunyat al-Almaʿī', x:920, y:3775, author:'قاسم بن قطلوبغا (d. 879H)' });
+    addNode({ id:'mawahibrahman', name:'مواهب الرحمن في مذهب أبي حنيفة النعمان\nMawāhib al-Raḥmān fī Madhhab Abī Ḥanīfa al-Nuʿmān', x:710, y:4225, author:'إبراهيم الطرابلسي (d. 922H)' });
+    addNode({ id:'muhimmatmufti', name:'مُهمّات المفتي\nMuhimmāt al-Muftī', x:920, y:4225, author:'شمس الدين ابن كمال باشا (d. 940H)' });
+    addNode({ id:'nataijafkar', name:'نتائج الأفكار في كشف الرموز والأسرار\nNatāʾij al-Afkār fī Kashf al-Rumūz wa al-Asrār', x:1130, y:4225, author:'شمس الدين قاضي زاده (d. 988H)' });
+    addNode({ id:'nutaffatawa', name:'النتف في الفتاوى\nAl-Nutaf fī al-Fatāwā', x:1340, y:1855, author:'علي بن حسين السغدي (d. 461H)' });
+    addNode({ id:'nasbraya', name:'نصب الراية\nNaṣb al-Rāyah', x:290, y:3445, author:'جمال الدين الزيلعي (d. 762H)' });
+    addNode({ id:'nawadirmualla', name:'نوادر (المعلى بن منصور)\nNawādir (al-Muʿallā ibn Manṣūr)', x:1550, y:1855, author:'المعلى بن منصور (d. 500H)' });
+    addNode({ id:'nurayn', name:'نور العين في إصلاح جامع الفصولين\nNūr al-ʿAyn fī Iṣlāḥ Jāmiʿ al-Fuṣūlayn', x:1130, y:4675, author:'محمد أفندي نشانجي زاده (d. 1031H)' });
+    addNode({ id:'nuridah', name:'نور الإيضاح ونجاة الأرواح\nNūr al-Īḍāḥ wa Najāt al-Arwāḥ', x:1340, y:4675, author:'حسن بن عمار الشرنبلالي (d. 1069H)' });
+    addNode({ id:'wajizjamikab', name:'الوجيز شرح الجامع الكبير\nAl-Wajīz Sharḥ al-Jāmiʿ al-Kabīr', x:500, y:2875, author:'جمال الدين الحصيري (d. 636H)' });
+    addNode({ id:'hadiyyaibnimad', name:'هدية ابن العماد لعُبّاد العِباد\nHadiyyat Ibn al-ʿImād li-ʿUbbād al-ʿIbād', x:1760, y:4675, author:'عبد الرحمن بن محمد العمادي (d. 1051H)' });
+    addNode({ id:'hadiyyasuluk', name:'هديةُ الصّعلوك شرح تحفة الملوك\nHadiyyat al-Ṣuʿlūk Sharḥ Tuḥfat al-Mulūk', x:1340, y:4225, author:'أبو الليث محرم الزيلي (d. 1000H)' });
+    addNode({ id:'harawniyyat', name:'الهارونيات\nAl-Harawniyyāt', x:1130, y:625, author:'محمد بن الحسن الشيباني (d. 189H)' });
+
+
+  if(!state._qudooriNextToMabsut){
+    const q = state.nodes.find(n => n.id === 'qudoori');
+    const mabsut = state.nodes.find(n => n.id === 'mabsut');
+    if(q && mabsut){ q.x = mabsut.x + 40; q.y = mabsut.y + 130; }
+    state._qudooriNextToMabsut = true;
+    changed = true;
+  }
+
+  if(!state._leftMarginAdded){
+    state.nodes.forEach(n => { n.x += 600; });
+    state._leftMarginAdded = true;
+    changed = true;
+  }
+
+  if(!state._mabsutRenamedToAsl){
+    const m = state.nodes.find(n => n.id === 'mabsut');
+    if(m){ m.name = 'الأصل\nAl-Aṣl'; }
+    state._mabsutRenamedToAsl = true;
+    changed = true;
+  }
+
+  if(!state._layoutFix1){
+    const set = (id, x, y) => { const n = state.nodes.find(n => n.id === id); if(n){ n.x = x; n.y = y; } };
+
+    // Move the whole Kanz al-Daqaaiq cluster to a clear region on the left
+    set('kanz',         100,  1700);
+    set('ramzhaqaiq',   100,  1850);
+    set('nahrfaiq',     320,  1850);
+    set('bahrraiq',     540,  1850);
+    set('tabyinhaqaiq', 760,  1850);
+    set('mustalkhas',   980,  1850);
+    set('minhatkhaliq', 540,  2000);
+    set('waafi',        1200, 1700);
+    set('kafi2',         1200, 1850);
+
+    // Move Mukhtasar al-Tahaawi up and to the right of Siyar al-Kabeer
+    set('mukhtasartahawi',     2550, 90);
+    set('sharhtahawijassas',   2450, 240);
+    set('sharhtahawiisbijabi', 2700, 240);
+
+    // Nudge the Multaqul Abhur combine-point away from the Majmaul Bahrain one so their lines stop overlapping
+    set('plusMultaqa',   900, 950);
+    set('multaqaabhur',  860, 1050);
+
+    state._layoutFix1 = true;
+    changed = true;
+  }
+
+  if(!state._topMarginAdded){
+    state.nodes.forEach(n => { n.y += 500; });
+    state._topMarginAdded = true;
+    changed = true;
+  }
+
+  if(!state._shiftDown2){
+    state.nodes.forEach(n => { n.y += 400; });
+    state._shiftDown2 = true;
+    changed = true;
+  }
+
+  if(!state._qudooriCentury5){
+    const q = state.nodes.find(n => n.id === 'qudoori');
+    if(q){
+      const centuryIndex = 4; // 0-indexed -> 5th century band
+      q.y = CENTURY_START_Y + centuryIndex * CENTURY_HEIGHT + (CENTURY_HEIGHT/2) - 20;
+    }
+    state._qudooriCentury5 = true;
+    changed = true;
+  }
+
+  if(!state._centuryPlacement1){
+    const set = (id, x, y) => { const n = state.nodes.find(n => n.id === id); if(n){ n.x = x; n.y = y; } };
+
+    set('mabsut', 290, 505);
+    set('ikhtiyar', 80, 2755);
+    set('badaisanai', 80, 2305);
+    set('bidaya', 290, 2305);
+    set('bahrraiq', 290, 4105);
+    set('binaya', 80, 3655);
+    set('tabyinhaqaiq', 80, 3205);
+    set('tuhfatfuqaha', 500, 2305);
+    set('tanwirabsar', 80, 4555);
+    set('jamisagh', 710, 505);
+    set('jamikab', 920, 505);
+    set('jamirumuz', 920, 4105);
+    set('jawharanayyira', 710, 3205);
+    set('tahtawifootnote', 80, 5455);
+    set('durrmukhtar', 710, 4555);
+    set('ibnabidin', 500, 5455);
+    set('ramzhaqaiq', 1340, 3655);
+    set('ziyadat', 80, 625);
+    set('siyarsagh', 290, 625);
+    set('siyarkab', 500, 625);
+    set('sharhtahawijassas', 80, 1405);
+    set('sharhtahawiisbijabi', 920, 2425);
+    set('sharhwiqaya', 1340, 3205);
+    set('tawaliuanwar', 920, 4555);
+    set('umdatriaya', 710, 5905);
+    set('inaya', 1550, 3205);
+    set('fathqadir', 290, 3775);
+    set('fathbabinaya', 80, 4675);
+    set('kafi', 290, 1405);
+    set('kanz', 920, 3325);
+    set('lubab', 920, 5455);
+    set('mabsutsharh', 920, 1855);
+    set('majmabahrain', 1760, 2755);
+    set('mukhtasartahawi', 710, 1405);
+    set('qudoori', 1130, 1855);
+    set('mukhtaar', 290, 2875);
+    set('multaqaabhur', 500, 4225);
+    set('minhatkhaliq', 1340, 5455);
+    set('nasafimz', 500, 2545);
+    set('nuqayah', 500, 3445);
+    set('nahrfaiq', 1550, 4675);
+    set('waafi', 710, 3445);
+    set('wiqriwaya', 710, 2875);
+    set('hidayah', 710, 2545);
+    set('kafi2', 920, 3445);
+
+    state._centuryPlacement1 = true;
+    changed = true;
+  }
+
+  if(!state._centuryPlacement2){
+    const set = (id, x, y) => { const n = state.nodes.find(n => n.id === id); if(n){ n.x = x; n.y = y; } };
+
+    set('ikhtilaf', 60, 510);
+    set('mabsut', 340, 510);
+    set('islahidah', 60, 4110);
+    set('amali', 620, 510);
+    set('ikhtiyar', 60, 2760);
+    set('badaisanai', 60, 2310);
+    set('bidaya', 340, 2310);
+    set('bahrraiq', 340, 4110);
+    set('burhanmawahib', 620, 4110);
+    set('binaya', 60, 3660);
+    set('tabyinhaqaiq', 60, 3210);
+    set('tajrid', 60, 1860);
+    set('tahrirjamikab', 340, 2760);
+    set('tuhfatfuqaha', 620, 2310);
+    set('tuhfatmuluk', 620, 2760);
+    set('tashihtarjih', 340, 3660);
+    set('tayinqawl', 60, 6810);
+    set('tafsilaqd', 900, 4110);
+    set('tanwirabsar', 60, 4560);
+    set('tanbihmushkilat', 340, 3210);
+    set('tanbihtakhrij', 620, 3210);
+    set('taysirmaqasid', 340, 4560);
+    set('jamisagh', 900, 510);
+    set('jamikab', 1180, 510);
+    set('jamirumuz', 1180, 4110);
+    set('jamifusulayn', 620, 3660);
+    set('jamifatawa', 900, 3660);
+    set('jurjaniyyat', 1460, 510);
+    set('jawharanayyira', 900, 3210);
+    set('haqaiqmanzuma', 900, 2760);
+    set('hashiyasadi', 1460, 4110);
+    set('hashiyahidaya', 1180, 2760);
+    set('hilbatmujalli', 1180, 3660);
+    set('tahtawifootnote', 60, 5460);
+    set('tahtawimaraqi', 340, 5460);
+    set('kharaj', 1740, 510);
+    set('khulasadalail', 900, 2310);
+    set('khulasafatawa', 1180, 2310);
+    set('durrmuntaqa', 620, 4560);
+    set('durrmukhtar', 900, 4560);
+    set('dirayah', 1460, 3660);
+    set('dhakhiratuqba', 1740, 4110);
+    set('raddsiyarawzai', 2020, 510);
+    set('ibnabidin', 620, 5460);
+    set('ruqayyat', 2300, 510);
+    set('ramzhaqaiq', 1740, 3660);
+    set('ruusmasail', 1460, 2310);
+    set('zubdatahkam', 1180, 3210);
+    set('ziyadat', 2580, 510);
+    set('sirajwahhaj', 1460, 3210);
+    set('siaya', 60, 5910);
+    set('siqaya', 340, 5910);
+    set('siyarsagh', 2860, 510);
+    set('siyarkab', 3140, 510);
+    set('sharhjamisagh1', 1740, 2310);
+    set('sharhjamisagh2', 340, 1860);
+    set('sharhjamisagh3', 2020, 2310);
+    set('sharhjamisagh4', 2300, 2310);
+    set('sharhjamisagh5', 2580, 2310);
+    set('sharhjamisagh6', 2860, 2310);
+    set('sharhjamisagh7', 620, 5910);
+    set('sharhziyadat1', 3140, 2310);
+    set('sharhziyadat2', 3420, 2310);
+    set('sharhsiyarkab', 620, 1860);
+    set('sharhmukhtasarquduri', 900, 1860);
+    set('sharhtahawijassas', 60, 1410);
+    set('sharhtahawiisbijabi', 3700, 2310);
+    set('sharhmullamiskin', 2020, 4110);
+    set('sharhwiqaya', 1740, 3210);
+    set('tariqatkhilaf', 1460, 2760);
+    set('tawaliuanwar', 1180, 4560);
+    set('uqudduriyya', 900, 5460);
+    set('umdatriaya', 900, 5910);
+    set('inaya', 2020, 3210);
+    set('uyunmadhahib', 2300, 3210);
+    set('ghayatbayan', 2580, 3210);
+    set('ghurarahkam', 2020, 3660);
+    set('ghunyatmutamalli', 2300, 4110);
+    set('fatawaanqarawiyya', 1460, 4560);
+    set('fatawabazzaziyya', 2300, 3660);
+    set('fatawatatarkhaniyya', 2860, 3210);
+    set('fatawatumurtashi', 1740, 4560);
+    set('fatawakhayriyya', 2020, 4560);
+    set('fatawazayniyya', 2580, 4110);
+    set('fatawasirajiyya', 3980, 2310);
+    set('fatawaqarihidaya', 2580, 3660);
+    set('fatawaqadikhan', 4260, 2310);
+    set('fatawatarsusiyya', 3140, 3210);
+    set('fatawazahiriyya', 1740, 2760);
+    set('fatawaadliyya', 2860, 4110);
+    set('fatawalaknawi', 1180, 5910);
+    set('fatawanazm', 1460, 5910);
+    set('fatawawalwalijiyya', 4540, 2310);
+    set('fatawahindiyya', 2300, 4560);
+    set('fathqadir', 2860, 3660);
+    set('fathbabinaya', 2580, 4560);
+    set('fathallahmuin', 60, 5010);
+    set('fusulusrushani', 2020, 2760);
+    set('fiqhnafi', 4820, 2310);
+    set('fiqhmadhahibarbaa', 1740, 5910);
+    set('fiqhislami', 60, 6360);
+    set('fiqhhanafithawb', 340, 6360);
+    set('fiqhhanafiwaadilla', 620, 6360);
+    set('fiqhhanafibiadilla', 900, 6360);
+    set('fiqhhanafimuyassar', 1180, 6360);
+    set('fiqhmuyassar', 1460, 6360);
+    set('qurratuyun', 2020, 5910);
+    set('kafi', 340, 1410);
+    set('kafifiqhhanafi', 1740, 6360);
+    set('kitabhujja', 3420, 510);
+    set('kitabmujarrad', 60, 960);
+    set('kashfhaqaiq', 2300, 5910);
+    set('kifayahidaya', 3420, 3210);
+    set('kanz', 3700, 3210);
+    set('kaysaniyyat', 3700, 510);
+    set('lubab', 1180, 5460);
+    set('mabsutsharh', 1180, 1860);
+    set('majallatahkam', 1460, 5460);
+    set('majmaanhur', 2860, 4560);
+    set('majmabahrain', 2300, 2760);
+    set('mukhtasarikhtilaf', 620, 1410);
+    set('muhitburhani', 2580, 2760);
+    set('mukhtasartahawi', 900, 1410);
+    set('mukhtasarkarkhi', 1180, 1410);
+    set('qudoori', 1460, 1860);
+    set('mukhtaar', 2860, 2760);
+    set('maraqifalah', 3140, 4560);
+    set('masailbadriyya', 3140, 3660);
+    set('mustasfa', 3980, 3210);
+    set('musaffa', 4260, 3210);
+    set('mazharhaqaiq', 3420, 4560);
+    set('muqaddimaghaznawiyya', 5100, 2310);
+    set('multaqatfatwa', 5380, 2310);
+    set('multaqaabhur', 3140, 4110);
+    set('mawsuafiqhiyya', 2020, 6360);
+    set('muinmufti', 3700, 4560);
+    set('manbamajma', 4540, 3210);
+    set('minhatkhaliq', 1740, 5460);
+    set('minhatsuluk', 3420, 3660);
+    set('manzumatibnwahban', 4820, 3210);
+    set('munyatmusalli', 5100, 3210);
+    set('munyatalmai', 3700, 3660);
+    set('nasafimz', 60, 2450);
+    set('mawahibrahman', 3420, 4110);
+    set('muhimmatmufti', 3700, 4110);
+    set('nataijafkar', 3980, 4110);
+    set('nutaffatawa', 1740, 1860);
+    set('nasbraya', 5380, 3210);
+    set('nuqayah', 60, 3350);
+    set('nawadirmualla', 2020, 1860);
+    set('nurayn', 3980, 4560);
+    set('nuridah', 4260, 4560);
+    set('nahrfaiq', 4540, 4560);
+    set('waafi', 340, 3350);
+    set('wajizjamikab', 3140, 2760);
+    set('wiqriwaya', 3420, 2760);
+    set('hadiyyaibnimad', 4820, 4560);
+    set('hadiyyasuluk', 4260, 4110);
+    set('hidayah', 340, 2450);
+    set('harawniyyat', 3980, 510);
+    set('kafi2', 620, 3350);
+
+    state._centuryPlacement2 = true;
+    changed = true;
+  }
+
+  if(!state._centuryPlacement3){
+    const set = (id, x, y) => { const n = state.nodes.find(n => n.id === id); if(n){ n.x = x; n.y = y; } };
+
+    set('ikhtilaf', 60, 510);
+    set('mabsut', 500, 510);
+    set('islahidah', 60, 4110);
+    set('amali', 940, 510);
+    set('ikhtiyar', 60, 2760);
+    set('badaisanai', 60, 2310);
+    set('bidaya', 500, 2310);
+    set('bahrraiq', 500, 4110);
+    set('burhanmawahib', 940, 4110);
+    set('binaya', 60, 3660);
+    set('tabyinhaqaiq', 60, 3210);
+    set('tajrid', 60, 1860);
+    set('tahrirjamikab', 500, 2760);
+    set('tuhfatfuqaha', 940, 2310);
+    set('tuhfatmuluk', 940, 2760);
+    set('tashihtarjih', 500, 3660);
+    set('tayinqawl', 60, 6810);
+    set('tafsilaqd', 1380, 4110);
+    set('tanwirabsar', 60, 4560);
+    set('tanbihmushkilat', 500, 3210);
+    set('tanbihtakhrij', 940, 3210);
+    set('taysirmaqasid', 500, 4560);
+    set('jamisagh', 1380, 510);
+    set('jamikab', 1820, 510);
+    set('jamirumuz', 1820, 4110);
+    set('jamifusulayn', 940, 3660);
+    set('jamifatawa', 1380, 3660);
+    set('jurjaniyyat', 2260, 510);
+    set('jawharanayyira', 1380, 3210);
+    set('haqaiqmanzuma', 1380, 2760);
+    set('hashiyasadi', 2260, 4110);
+    set('hashiyahidaya', 1820, 2760);
+    set('hilbatmujalli', 1820, 3660);
+    set('tahtawifootnote', 60, 5460);
+    set('tahtawimaraqi', 500, 5460);
+    set('kharaj', 2700, 510);
+    set('khulasadalail', 1380, 2310);
+    set('khulasafatawa', 1820, 2310);
+    set('durrmuntaqa', 940, 4560);
+    set('durrmukhtar', 1380, 4560);
+    set('dirayah', 2260, 3660);
+    set('dhakhiratuqba', 2700, 4110);
+    set('raddsiyarawzai', 3140, 510);
+    set('ibnabidin', 940, 5460);
+    set('ruqayyat', 3580, 510);
+    set('ramzhaqaiq', 2700, 3660);
+    set('ruusmasail', 2260, 2310);
+    set('zubdatahkam', 1820, 3210);
+    set('ziyadat', 4020, 510);
+    set('sirajwahhaj', 2260, 3210);
+    set('siaya', 60, 5910);
+    set('siqaya', 500, 5910);
+    set('siyarsagh', 4460, 510);
+    set('siyarkab', 4900, 510);
+    set('sharhjamisagh1', 2700, 2310);
+    set('sharhjamisagh2', 500, 1860);
+    set('sharhjamisagh3', 3140, 2310);
+    set('sharhjamisagh4', 3580, 2310);
+    set('sharhjamisagh5', 4020, 2310);
+    set('sharhjamisagh6', 4460, 2310);
+    set('sharhjamisagh7', 940, 5910);
+    set('sharhziyadat1', 4900, 2310);
+    set('sharhziyadat2', 5340, 2310);
+    set('sharhsiyarkab', 940, 1860);
+    set('sharhmukhtasarquduri', 1380, 1860);
+    set('sharhtahawijassas', 60, 1410);
+    set('sharhtahawiisbijabi', 5780, 2310);
+    set('sharhmullamiskin', 3140, 4110);
+    set('sharhwiqaya', 2700, 3210);
+    set('tariqatkhilaf', 2260, 2760);
+    set('tawaliuanwar', 1820, 4560);
+    set('uqudduriyya', 1380, 5460);
+    set('umdatriaya', 1380, 5910);
+    set('inaya', 3140, 3210);
+    set('uyunmadhahib', 3580, 3210);
+    set('ghayatbayan', 4020, 3210);
+    set('ghurarahkam', 3140, 3660);
+    set('ghunyatmutamalli', 3580, 4110);
+    set('fatawaanqarawiyya', 2260, 4560);
+    set('fatawabazzaziyya', 3580, 3660);
+    set('fatawatatarkhaniyya', 4460, 3210);
+    set('fatawatumurtashi', 2700, 4560);
+    set('fatawakhayriyya', 3140, 4560);
+    set('fatawazayniyya', 4020, 4110);
+    set('fatawasirajiyya', 6220, 2310);
+    set('fatawaqarihidaya', 4020, 3660);
+    set('fatawaqadikhan', 60, 2470);
+    set('fatawatarsusiyya', 4900, 3210);
+    set('fatawazahiriyya', 2700, 2760);
+    set('fatawaadliyya', 4460, 4110);
+    set('fatawalaknawi', 1820, 5910);
+    set('fatawanazm', 2260, 5910);
+    set('fatawawalwalijiyya', 500, 2470);
+    set('fatawahindiyya', 3580, 4560);
+    set('fathqadir', 4460, 3660);
+    set('fathbabinaya', 4020, 4560);
+    set('fathallahmuin', 60, 5010);
+    set('fusulusrushani', 3140, 2760);
+    set('fiqhnafi', 940, 2470);
+    set('fiqhmadhahibarbaa', 2700, 5910);
+    set('fiqhislami', 60, 6360);
+    set('fiqhhanafithawb', 500, 6360);
+    set('fiqhhanafiwaadilla', 940, 6360);
+    set('fiqhhanafibiadilla', 1380, 6360);
+    set('fiqhhanafimuyassar', 1820, 6360);
+    set('fiqhmuyassar', 2260, 6360);
+    set('qurratuyun', 3140, 5910);
+    set('kafi', 500, 1410);
+    set('kafifiqhhanafi', 2700, 6360);
+    set('kitabhujja', 5340, 510);
+    set('kitabmujarrad', 60, 960);
+    set('kashfhaqaiq', 3580, 5910);
+    set('kifayahidaya', 5340, 3210);
+    set('kanz', 5780, 3210);
+    set('kaysaniyyat', 5780, 510);
+    set('lubab', 1820, 5460);
+    set('mabsutsharh', 1820, 1860);
+    set('majallatahkam', 2260, 5460);
+    set('majmaanhur', 4460, 4560);
+    set('majmabahrain', 3580, 2760);
+    set('mukhtasarikhtilaf', 940, 1410);
+    set('muhitburhani', 4020, 2760);
+    set('mukhtasartahawi', 1380, 1410);
+    set('mukhtasarkarkhi', 1820, 1410);
+    set('qudoori', 2260, 1860);
+    set('mukhtaar', 4460, 2760);
+    set('maraqifalah', 4900, 4560);
+    set('masailbadriyya', 4900, 3660);
+    set('mustasfa', 6220, 3210);
+    set('musaffa', 60, 3370);
+    set('mazharhaqaiq', 5340, 4560);
+    set('muqaddimaghaznawiyya', 1380, 2470);
+    set('multaqatfatwa', 1820, 2470);
+    set('multaqaabhur', 4900, 4110);
+    set('mawsuafiqhiyya', 3140, 6360);
+    set('muinmufti', 5780, 4560);
+    set('manbamajma', 500, 3370);
+    set('minhatkhaliq', 2700, 5460);
+    set('minhatsuluk', 5340, 3660);
+    set('manzumatibnwahban', 940, 3370);
+    set('munyatmusalli', 1380, 3370);
+    set('munyatalmai', 5780, 3660);
+    set('nasafimz', 2260, 2470);
+    set('mawahibrahman', 5340, 4110);
+    set('muhimmatmufti', 5780, 4110);
+    set('nataijafkar', 6220, 4110);
+    set('nutaffatawa', 2700, 1860);
+    set('nasbraya', 1820, 3370);
+    set('nuqayah', 2260, 3370);
+    set('nawadirmualla', 3140, 1860);
+    set('nurayn', 6220, 4560);
+    set('nuridah', 60, 4720);
+    set('nahrfaiq', 500, 4720);
+    set('waafi', 2700, 3370);
+    set('wajizjamikab', 4900, 2760);
+    set('wiqriwaya', 5340, 2760);
+    set('hadiyyaibnimad', 940, 4720);
+    set('hadiyyasuluk', 60, 4270);
+    set('hidayah', 2700, 2470);
+    set('harawniyyat', 6220, 510);
+    set('kafi2', 3140, 3370);
+
+    state._centuryPlacement3 = true;
+    changed = true;
+  }
+
+  if(!state._centuryPlacement4){
+    const set = (id, x, y) => { const n = state.nodes.find(n => n.id === id); if(n){ n.x = x; n.y = y; } };
+
+    set('jamisagh', 60, 510);
+    set('ikhtilaf', 500, 510);
+    set('mabsut', 940, 510);
+    set('amali', 1380, 510);
+    set('jamikab', 1820, 510);
+    set('jurjaniyyat', 2260, 510);
+    set('kharaj', 2700, 510);
+    set('raddsiyarawzai', 3140, 510);
+    set('ruqayyat', 3580, 510);
+    set('ziyadat', 4020, 510);
+    set('siyarsagh', 4460, 510);
+    set('siyarkab', 4900, 510);
+    set('kitabhujja', 5340, 510);
+    set('kaysaniyyat', 5780, 510);
+    set('harawniyyat', 6220, 510);
+    set('bahrraiq', 60, 4110);
+    set('jamirumuz', 500, 4110);
+    set('multaqaabhur', 940, 4110);
+    set('islahidah', 1380, 4110);
+    set('burhanmawahib', 1820, 4110);
+    set('tafsilaqd', 2260, 4110);
+    set('hashiyasadi', 2700, 4110);
+    set('dhakhiratuqba', 3140, 4110);
+    set('sharhmullamiskin', 3580, 4110);
+    set('ghunyatmutamalli', 4020, 4110);
+    set('fatawazayniyya', 4460, 4110);
+    set('fatawaadliyya', 4900, 4110);
+    set('mawahibrahman', 5340, 4110);
+    set('muhimmatmufti', 5780, 4110);
+    set('nataijafkar', 6220, 4110);
+    set('hadiyyasuluk', 60, 4270);
+    set('ikhtiyar', 60, 2760);
+    set('majmabahrain', 500, 2760);
+    set('mukhtaar', 940, 2760);
+    set('wiqriwaya', 1380, 2760);
+    set('tahrirjamikab', 1820, 2760);
+    set('tuhfatmuluk', 2260, 2760);
+    set('haqaiqmanzuma', 2700, 2760);
+    set('hashiyahidaya', 3140, 2760);
+    set('tariqatkhilaf', 3580, 2760);
+    set('fatawazahiriyya', 4020, 2760);
+    set('fusulusrushani', 4460, 2760);
+    set('muhitburhani', 4900, 2760);
+    set('wajizjamikab', 5340, 2760);
+    set('badaisanai', 60, 2310);
+    set('bidaya', 500, 2310);
+    set('tuhfatfuqaha', 940, 2310);
+    set('sharhtahawiisbijabi', 1380, 2310);
+    set('nasafimz', 1820, 2310);
+    set('hidayah', 2260, 2310);
+    set('khulasadalail', 2700, 2310);
+    set('khulasafatawa', 3140, 2310);
+    set('ruusmasail', 3580, 2310);
+    set('sharhjamisagh1', 4020, 2310);
+    set('sharhjamisagh3', 4460, 2310);
+    set('sharhjamisagh4', 4900, 2310);
+    set('sharhjamisagh5', 5340, 2310);
+    set('sharhjamisagh6', 5780, 2310);
+    set('sharhziyadat1', 6220, 2310);
+    set('sharhziyadat2', 60, 2470);
+    set('fatawasirajiyya', 500, 2470);
+    set('fatawaqadikhan', 940, 2470);
+    set('fatawawalwalijiyya', 1380, 2470);
+    set('fiqhnafi', 1820, 2470);
+    set('muqaddimaghaznawiyya', 2260, 2470);
+    set('multaqatfatwa', 2700, 2470);
+    set('binaya', 60, 3660);
+    set('ramzhaqaiq', 500, 3660);
+    set('fathqadir', 940, 3660);
+    set('tashihtarjih', 1380, 3660);
+    set('jamifusulayn', 1820, 3660);
+    set('jamifatawa', 2260, 3660);
+    set('hilbatmujalli', 2700, 3660);
+    set('dirayah', 3140, 3660);
+    set('ghurarahkam', 3580, 3660);
+    set('fatawabazzaziyya', 4020, 3660);
+    set('fatawaqarihidaya', 4460, 3660);
+    set('masailbadriyya', 4900, 3660);
+    set('minhatsuluk', 5340, 3660);
+    set('munyatalmai', 5780, 3660);
+    set('tabyinhaqaiq', 60, 3210);
+    set('jawharanayyira', 500, 3210);
+    set('sharhwiqaya', 940, 3210);
+    set('inaya', 1380, 3210);
+    set('kanz', 1820, 3210);
+    set('nuqayah', 2260, 3210);
+    set('waafi', 2700, 3210);
+    set('kafi2', 3140, 3210);
+    set('tanbihmushkilat', 3580, 3210);
+    set('tanbihtakhrij', 4020, 3210);
+    set('zubdatahkam', 4460, 3210);
+    set('sirajwahhaj', 4900, 3210);
+    set('uyunmadhahib', 5340, 3210);
+    set('ghayatbayan', 5780, 3210);
+    set('fatawatatarkhaniyya', 6220, 3210);
+    set('fatawatarsusiyya', 60, 3370);
+    set('kifayahidaya', 500, 3370);
+    set('mustasfa', 940, 3370);
+    set('musaffa', 1380, 3370);
+    set('manbamajma', 1820, 3370);
+    set('manzumatibnwahban', 2260, 3370);
+    set('munyatmusalli', 2700, 3370);
+    set('nasbraya', 3140, 3370);
+    set('mabsutsharh', 60, 1860);
+    set('qudoori', 500, 1860);
+    set('tajrid', 940, 1860);
+    set('sharhjamisagh2', 1380, 1860);
+    set('sharhsiyarkab', 1820, 1860);
+    set('sharhmukhtasarquduri', 2260, 1860);
+    set('nutaffatawa', 2700, 1860);
+    set('nawadirmualla', 3140, 1860);
+    set('tayinqawl', 60, 6810);
+    set('tanwirabsar', 60, 4560);
+    set('durrmukhtar', 500, 4560);
+    set('tawaliuanwar', 940, 4560);
+    set('fathbabinaya', 1380, 4560);
+    set('nahrfaiq', 1820, 4560);
+    set('taysirmaqasid', 2260, 4560);
+    set('durrmuntaqa', 2700, 4560);
+    set('fatawaanqarawiyya', 3140, 4560);
+    set('fatawatumurtashi', 3580, 4560);
+    set('fatawakhayriyya', 4020, 4560);
+    set('fatawahindiyya', 4460, 4560);
+    set('majmaanhur', 4900, 4560);
+    set('maraqifalah', 5340, 4560);
+    set('mazharhaqaiq', 5780, 4560);
+    set('muinmufti', 6220, 4560);
+    set('nurayn', 60, 4720);
+    set('nuridah', 500, 4720);
+    set('hadiyyaibnimad', 940, 4720);
+    set('tahtawifootnote', 60, 5460);
+    set('ibnabidin', 500, 5460);
+    set('lubab', 940, 5460);
+    set('minhatkhaliq', 1380, 5460);
+    set('tahtawimaraqi', 1820, 5460);
+    set('uqudduriyya', 2260, 5460);
+    set('majallatahkam', 2700, 5460);
+    set('umdatriaya', 60, 5910);
+    set('siaya', 500, 5910);
+    set('siqaya', 940, 5910);
+    set('sharhjamisagh7', 1380, 5910);
+    set('fatawalaknawi', 1820, 5910);
+    set('fatawanazm', 2260, 5910);
+    set('fiqhmadhahibarbaa', 2700, 5910);
+    set('qurratuyun', 3140, 5910);
+    set('kashfhaqaiq', 3580, 5910);
+    set('sharhtahawijassas', 60, 1410);
+    set('kafi', 500, 1410);
+    set('mukhtasartahawi', 940, 1410);
+    set('mukhtasarikhtilaf', 1380, 1410);
+    set('mukhtasarkarkhi', 1820, 1410);
+    set('fathallahmuin', 60, 5010);
+    set('fiqhislami', 60, 6360);
+    set('fiqhhanafithawb', 500, 6360);
+    set('fiqhhanafiwaadilla', 940, 6360);
+    set('fiqhhanafibiadilla', 1380, 6360);
+    set('fiqhhanafimuyassar', 1820, 6360);
+    set('fiqhmuyassar', 2260, 6360);
+    set('kafifiqhhanafi', 2700, 6360);
+    set('mawsuafiqhiyya', 3140, 6360);
+    set('kitabmujarrad', 60, 960);
+
+    state._centuryPlacement4 = true;
+    changed = true;
+  }
+
+  state.nodes.forEach(n => {
+    if(n.type !== 'combine' && !n.color){
+      n.color = nextColor();
+      changed = true;
+    }
+  });
+
+  if(changed) saveState();
+}
+
+function seedDefaultState(){
+  const books = [
+    { id: 'mabsut',   name: 'المبسوط\nAl-Mabsūṭ',              x: 120,  y: 100 },
+    { id: 'jamisagh', name: 'الجامع الصغير\nAl-Jāmiʿ al-Ṣaghīr', x: 420,  y: 100 },
+    { id: 'jamikab',  name: 'الجامع الكبير\nAl-Jāmiʿ al-Kabīr',  x: 720,  y: 100 },
+    { id: 'ziyadat',  name: 'الزيادات\nAl-Ziyādāt',             x: 1020, y: 100 },
+    { id: 'siyarsagh',name: 'السير الصغير\nAl-Siyar al-Ṣaghīr',  x: 1320, y: 100 },
+    { id: 'siyarkab', name: 'السير الكبير\nAl-Siyar al-Kabīr',   x: 1620, y: 100 }
+  ];
+  const kafi = { id: 'kafi', name: 'الكافي\nAl-Kāfī', x: 850, y: 380 };
+
+  state.nodes = [...books, kafi];
+  state.edges = books.map(b => ({ id: uid(), from: b.id, to: kafi.id, type: 'summary' }));
+  saveState();
+}
+
+async function saveState(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(state));
+  }catch(e){ console.error('save failed', e); }
+}
+
+function uid(){ return 'n' + Math.random().toString(36).slice(2,9); }
+
+const CENTURY_HEIGHT = 450;
+const CENTURY_START_Y = 40;
+const NUM_CENTURIES = 16;
+const ARABIC_ORDINALS = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر','الثالث عشر','الرابع عشر','الخامس عشر','السادس عشر'];
+const ENGLISH_ORDINALS = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th'];
+
+function buildTimeline(){
+  const el = document.getElementById('timeline');
+  el.innerHTML = '';
+  for(let i=0;i<NUM_CENTURIES;i++){
+    const y = CENTURY_START_Y + i * CENTURY_HEIGHT;
+
+    const line = document.createElement('div');
+    line.className = 'century-row';
+    line.style.top = y + 'px';
+    el.appendChild(line);
+
+    const label = document.createElement('div');
+    label.className = 'century-label';
+    label.style.top = (y + 8) + 'px';
+    label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
+    el.appendChild(label);
+  }
+  // closing line at the bottom of the last century
+  const closingLine = document.createElement('div');
+  closingLine.className = 'century-row';
+  closingLine.style.top = (CENTURY_START_Y + NUM_CENTURIES * CENTURY_HEIGHT) + 'px';
+  el.appendChild(closingLine);
+}
+
+const COLOR_PALETTE = [
+  '#2f6f4f', '#1d5b8a', '#7a4fa3', '#b5651d',
+  '#5a7d1f', '#0e7c86', '#8a3a5c', '#4a4a8a',
+  '#a67c00', '#2e8b8b', '#6b3fa0', '#3f6b3f'
+];
+
+function nextColor(){
+  if(state._colorIndex === undefined) state._colorIndex = 0;
+  const c = COLOR_PALETTE[state._colorIndex % COLOR_PALETTE.length];
+  state._colorIndex++;
+  return c;
+}
+
+function applyZoom(){
+  const canvas = document.getElementById('canvas');
+  const sizer = document.getElementById('zoom-sizer');
+  canvas.style.transform = `scale(${zoom})`;
+  sizer.style.width = (7000 * zoom) + 'px';
+  sizer.style.height = (7600 * zoom) + 'px';
+  document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
+}
+
+function zoomIn(){
+  zoom = Math.min(ZOOM_MAX, +(zoom + ZOOM_STEP).toFixed(2));
+  applyZoom();
+}
+
+function zoomOut(){
+  zoom = Math.max(ZOOM_MIN, +(zoom - ZOOM_STEP).toFixed(2));
+  applyZoom();
+}
+
+function zoomReset(){
+  zoom = 1;
+  applyZoom();
+}
+
+function addBook(){
+  const input = document.getElementById('bookName');
+  const name = input.value.trim();
+  if(!name) return;
+  const wrap = document.getElementById('canvas-wrap');
+  const x = 80 + Math.random()*400 + wrap.scrollLeft / zoom;
+  const y = 80 + Math.random()*300 + wrap.scrollTop / zoom;
+  state.nodes.push({ id: uid(), name, x, y, color: nextColor() });
+  input.value = '';
+  saveState();
+  render();
+}
+
+function toggleCombineMode(){
+  const btn = document.getElementById('combineBtn');
+  const hint = document.getElementById('hint');
+
+  if(!combineMode){
+    combineMode = true;
+    combineSet.clear();
+    selected = null;
+    btn.textContent = '⊕ Done combining';
+    hint.textContent = 'Click all the source books, then click "⊕ Done combining" — you\'ll be asked for the new book\'s name.';
+    render();
+    return;
+  }
+
+  combineMode = false;
+  btn.textContent = '⊕ Combine books';
+  hint.textContent = 'Click "Add book" to place a book. Click one book, then another, to connect them. Hover a book and click the small circle in its corner to mark it as a manuscript.';
+  if(combineSet.size >= 2){
+    finishCombine();
+  } else {
+    combineSet.clear();
+    render();
+  }
+}
+
+function finishCombine(){
+  const ids = Array.from(combineSet);
+  const sources = ids.map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
+  if(sources.length < 2) return;
+
+  const name = prompt('What is the new book formed by combining these ' + sources.length + ' books?');
+  if(!name || !name.trim()){ combineSet.clear(); return; }
+
+  const cx = sources.reduce((s,n) => s + n.x, 0) / sources.length;
+  const cy = Math.max(...sources.map(n => n.y)) + 130;
+
+  const plusNode = { id: uid(), name: '+', type: 'combine', x: cx, y: cy };
+  const newBook = { id: uid(), name: name.trim(), x: cx - 20, y: cy + 110, color: nextColor() };
+
+  state.nodes.push(plusNode, newBook);
+  sources.forEach(s => {
+    state.edges.push({ id: uid(), from: s.id, to: plusNode.id, type: 'merge' });
+  });
+  state.edges.push({ id: uid(), from: plusNode.id, to: newBook.id, type: 'merge' });
+
+  combineSet.clear();
+  saveState();
+  render();
+}
+
+function clearSelection(){
+  selected = null;
+  pendingPair = null;
+  hideMenu();
+  render();
+}
+
+function resetAll(){
+  if(!confirm('Clear the entire board? This cannot be undone.')) return;
+  state = { nodes: [], edges: [] };
+  saveState();
+  render();
+}
+
+function deleteNode(id, ev){
+  ev.stopPropagation();
+  state.nodes = state.nodes.filter(n => n.id !== id);
+  state.edges = state.edges.filter(e => e.from !== id && e.to !== id);
+  if(selected === id) selected = null;
+  saveState();
+  render();
+}
+
+function toggleManuscript(id, ev){
+  ev.stopPropagation();
+  const node = state.nodes.find(n => n.id === id);
+  if(!node) return;
+  node.manuscript = !node.manuscript;
+  saveState();
+  render();
+}
+
+function renameNode(id, ev){
+  ev.stopPropagation();
+  const node = state.nodes.find(n => n.id === id);
+  if(!node) return;
+  const updated = prompt('Edit book name (Arabic on line 1, transliteration on line 2):', node.name);
+  if(updated === null) return;
+  const trimmed = updated.trim();
+  if(!trimmed) return;
+  node.name = trimmed;
+  saveState();
+  render();
+}
+
+function isValidCssColor(str){
+  const opt = new Option();
+  opt.style.color = '';
+  opt.style.color = str;
+  return opt.style.color !== '';
+}
+
+function applySelectedColor(){
+  if(!selected) return;
+  const node = state.nodes.find(n => n.id === selected);
+  if(!node || node.type === 'combine') return;
+  const val = document.getElementById('selectedColorInput').value.trim();
+  if(!val) return;
+  if(!isValidCssColor(val)){
+    alert('"' + val + '" doesn\'t look like a valid color. Try a hex code like #2f6f4f or a name like teal.');
+    return;
+  }
+  node.color = val;
+  saveState();
+  render();
+}
+
+function promptColorText(id, ev){
+  ev.stopPropagation();
+  const node = state.nodes.find(n => n.id === id);
+  if(!node) return;
+  const input = prompt('Type a color — hex code (e.g. #2f6f4f) or a CSS color name (e.g. teal):', node.color || '#8a7355');
+  if(input === null) return;
+  const trimmed = input.trim();
+  if(!trimmed) return;
+  if(!isValidCssColor(trimmed)){
+    alert('"' + trimmed + '" doesn\'t look like a valid color. Try a hex code like #2f6f4f or a name like teal.');
+    return;
+  }
+  node.color = trimmed;
+  saveState();
+  render();
+}
+
+function openColorPicker(id, ev){
+  ev.stopPropagation();
+  const node = state.nodes.find(n => n.id === id);
+  if(!node) return;
+  const picker = document.createElement('input');
+  picker.type = 'color';
+  picker.value = node.color || '#8a7355';
+  picker.style.position = 'fixed';
+  picker.style.left = ev.clientX + 'px';
+  picker.style.top = ev.clientY + 'px';
+  picker.style.width = '1px';
+  picker.style.height = '1px';
+  picker.style.opacity = '0';
+  picker.style.pointerEvents = 'none';
+  document.body.appendChild(picker);
+
+  picker.addEventListener('input', () => {
+    node.color = picker.value;
+    render();
+  });
+  picker.addEventListener('change', () => {
+    saveState();
+    if(picker.parentNode) document.body.removeChild(picker);
+  });
+  picker.click();
+}
+
+function onNodeClick(id, ev){
+  if(dragInfo && dragInfo.moved) return;
+
+  if(combineMode){
+    if(combineSet.has(id)) combineSet.delete(id);
+    else combineSet.add(id);
+    render();
+    return;
+  }
+
+  if(selected === null){
+    selected = id;
+    render();
+    return;
+  }
+  if(selected === id){
+    selected = null;
+    render();
+    return;
+  }
+  pendingPair = { from: selected, to: id };
+  showMenu(ev.clientX, ev.clientY);
+}
+
+function showMenu(x, y){
+  const menu = document.getElementById('menu');
+  menu.style.display = 'block';
+  const mw = 260, mh = 150;
+  menu.style.left = Math.min(x, window.innerWidth - mw - 10) + 'px';
+  menu.style.top = Math.min(y, window.innerHeight - mh - 10) + 'px';
+}
+
+function hideMenu(){
+  document.getElementById('menu').style.display = 'none';
+  pendingPair = null;
+}
+
+function makeEdge(type){
+  if(!pendingPair) return;
+  state.edges.push({ id: uid(), from: pendingPair.from, to: pendingPair.to, type });
+  selected = null;
+  hideMenu();
+  saveState();
+  render();
+}
+
+function startDrag(id, ev){
+  const node = state.nodes.find(n => n.id === id);
+  const wrap = document.getElementById('canvas-wrap');
+  dragInfo = {
+    id,
+    moved: false,
+    startX: ev.clientX + wrap.scrollLeft,
+    startY: ev.clientY + wrap.scrollTop,
+    origX: node.x,
+    origY: node.y
+  };
+  document.addEventListener('mousemove', onDrag);
+  document.addEventListener('mouseup', endDrag);
+}
+
+function onDrag(ev){
+  if(!dragInfo) return;
+  const wrap = document.getElementById('canvas-wrap');
+  const dx = ((ev.clientX + wrap.scrollLeft) - dragInfo.startX) / zoom;
+  const dy = ((ev.clientY + wrap.scrollTop) - dragInfo.startY) / zoom;
+  if(Math.abs(dx) > 3 || Math.abs(dy) > 3) dragInfo.moved = true;
+  const node = state.nodes.find(n => n.id === dragInfo.id);
+  node.x = Math.max(0, dragInfo.origX + dx);
+  node.y = Math.max(0, dragInfo.origY + dy);
+  render();
+}
+
+function endDrag(){
+  document.removeEventListener('mousemove', onDrag);
+  document.removeEventListener('mouseup', endDrag);
+  if(dragInfo && dragInfo.moved) saveState();
+  dragInfo = null;
+}
+
+function edgeStyle(type){
+  if(type === 'commentary') return { width: 3.5, dash: 'none' };
+  if(type === 'footnote') return { width: 1.6, dash: '6,5' };
+  if(type === 'summary') return { width: 4, dash: '0.1,10' };
+  if(type === 'merge') return { width: 3.5, dash: '0.1,7' };
+  return { width: 1.5, dash: 'none' };
+}
+
+function edgeColor(a, b){
+  if(a.type === 'combine') return (b && b.color) || '#8a7355';
+  return (a && a.color) || '#8a7355';
+}
+
+function render(){
+  const canvas = document.getElementById('canvas');
+  document.querySelectorAll('.node').forEach(n => n.remove());
+
+  const colorCtrl = document.getElementById('selectedColorControl');
+  const selNode = selected ? state.nodes.find(n => n.id === selected) : null;
+  if(selNode && selNode.type !== 'combine'){
+    colorCtrl.style.display = 'flex';
+    document.getElementById('selectedColorName').textContent = selNode.name.split('\n')[0];
+    document.getElementById('selectedColorInput').value = selNode.color || '';
+  } else {
+    colorCtrl.style.display = 'none';
+  }
+
+  const elMap = {};
+  state.nodes.forEach(n => {
+    const div = document.createElement('div');
+    const isCombine = n.type === 'combine';
+    let cls = 'node';
+    if(isCombine) cls += ' combine';
+    if(selected === n.id) cls += ' selected';
+    if(combineSet.has(n.id)) cls += ' multiselect';
+    if(n.manuscript) cls += ' manuscript';
+    div.className = cls;
+    div.style.left = n.x + 'px';
+    div.style.top = n.y + 'px';
+    if(!isCombine && n.color && !n.manuscript){
+      div.style.borderColor = n.color;
+      div.style.borderWidth = '2px';
+    }
+
+    if(isCombine){
+      div.textContent = '+';
+    } else {
+      const lines = n.name.split('\n');
+      div.innerHTML = lines.map((l,i) => `<div style="${i===1 ? 'font-family:Cairo,sans-serif;font-weight:600;font-size:13px;font-style:italic;color:#6b5d4f;margin-top:3px;' : ''}">${l}</div>`).join('');
+    }
+
+    div.onmousedown = (ev) => { startDrag(n.id, ev); };
+    div.onclick = (ev) => { onNodeClick(n.id, ev); };
+    div.ondblclick = (ev) => { renameNode(n.id, ev); };
+    div.title = isCombine ? '' : ((n.author ? n.author + ' — ' : '') + 'Double-click to rename');
+
+    if(!isCombine){
+      const ms = document.createElement('div');
+      ms.className = 'ms-toggle';
+      ms.textContent = 'MS';
+      ms.title = 'Mark as manuscript (مخطوط)';
+      ms.onclick = (ev) => toggleManuscript(n.id, ev);
+      div.appendChild(ms);
+
+      const colorBtn = document.createElement('div');
+      colorBtn.className = 'color-toggle';
+      colorBtn.style.background = n.color || '#8a7355';
+      colorBtn.title = 'Choose a color for this book';
+      colorBtn.onclick = (ev) => openColorPicker(n.id, ev);
+      div.appendChild(colorBtn);
+
+      const colorTextBtn = document.createElement('div');
+      colorTextBtn.className = 'color-text-toggle';
+      colorTextBtn.textContent = '#';
+      colorTextBtn.title = 'Type a color (hex code or name)';
+      colorTextBtn.onclick = (ev) => promptColorText(n.id, ev);
+      div.appendChild(colorTextBtn);
+    }
+
+    const del = document.createElement('div');
+    del.className = 'del';
+    del.textContent = '×';
+    del.onclick = (ev) => deleteNode(n.id, ev);
+    div.appendChild(del);
+    canvas.appendChild(div);
+    elMap[n.id] = div;
+  });
+
+  const svg = document.getElementById('lines');
+  svg.innerHTML = '';
+
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  svg.appendChild(defs);
+
+  function subdivideElbow(p1, p2, p3, p4, segsPerLeg){
+    const pts = [p1];
+    const legs = [[p1,p2],[p2,p3],[p3,p4]];
+    legs.forEach(([from,to]) => {
+      for(let i=1;i<=segsPerLeg;i++){
+        const t = i/segsPerLeg;
+        pts.push([ from[0] + (to[0]-from[0])*t, from[1] + (to[1]-from[1])*t ]);
+      }
+    });
+    return pts;
+  }
+
+  state.edges.forEach(e => {
+    const a = state.nodes.find(n => n.id === e.from);
+    const b = state.nodes.find(n => n.id === e.to);
+    if(!a || !b) return;
+    const aEl = elMap[a.id], bEl = elMap[b.id];
+    const aw = aEl ? aEl.offsetWidth : 120, ah = aEl ? aEl.offsetHeight : 40;
+    const bw = bEl ? bEl.offsetWidth : 120, bh = bEl ? bEl.offsetHeight : 40;
+
+    const acx = a.x + aw/2, bcx = b.x + bw/2;
+    let ay, by;
+    if(b.y >= a.y){
+      ay = a.y + ah;
+      by = b.y;
+    } else {
+      ay = a.y;
+      by = b.y + bh;
+    }
+    const ymid = (ay + by) / 2;
+    const color = edgeColor(a, b);
+    const style = edgeStyle(e.type);
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', color);
+    path.setAttribute('stroke-linecap', 'round');
+
+    if(e.type === 'commentary'){
+      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
+      const pts = subdivideElbow(p1, p2, p3, p4, 5);
+      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke-width', 1.8);
+
+      const markerId = 'arrow-' + e.id;
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', markerId);
+      marker.setAttribute('viewBox', '0 0 10 10');
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('markerWidth', '6');
+      marker.setAttribute('markerHeight', '6');
+      marker.setAttribute('orient', 'auto');
+      const arrowShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+      arrowShape.setAttribute('fill', color);
+      marker.appendChild(arrowShape);
+      defs.appendChild(marker);
+
+      path.setAttribute('marker-mid', `url(#${markerId})`);
+      path.setAttribute('marker-end', `url(#${markerId})`);
+    } else if(e.type === 'merge'){
+      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
+      const pts = subdivideElbow(p1, p2, p3, p4, 14);
+      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke-width', 1.2);
+
+      const markerId = 'star-' + e.id;
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', markerId);
+      marker.setAttribute('viewBox', '0 0 10 10');
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('markerWidth', '5.5');
+      marker.setAttribute('markerHeight', '5.5');
+      marker.setAttribute('orient', '0');
+      const starShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      starShape.setAttribute('d', 'M 5,0.5 L 6.06,3.54 L 9.28,3.61 L 6.71,5.56 L 7.65,8.64 L 5,6.8 L 2.36,8.64 L 3.29,5.56 L 0.72,3.61 L 3.94,3.54 Z');
+      starShape.setAttribute('fill', color);
+      marker.appendChild(starShape);
+      defs.appendChild(marker);
+
+      path.setAttribute('marker-mid', `url(#${markerId})`);
+      path.setAttribute('marker-end', `url(#${markerId})`);
+    } else {
+      const d = `M ${acx} ${ay} L ${acx} ${ymid} L ${bcx} ${ymid} L ${bcx} ${by}`;
+      path.setAttribute('d', d);
+      path.setAttribute('stroke-width', style.width);
+      if(style.dash !== 'none') path.setAttribute('stroke-dasharray', style.dash);
+    }
+
+    path.style.pointerEvents = 'stroke';
+    path.style.cursor = 'pointer';
+    path.onclick = () => {
+      if(confirm('Remove this connection?')){
+        state.edges = state.edges.filter(x => x.id !== e.id);
+        saveState();
+        render();
+      }
+    };
+    svg.appendChild(path);
+  });
+}
+
+document.addEventListener('click', (ev) => {
+  if(ev.target.closest('.node') || ev.target.closest('#menu') || ev.target.closest('#toolbar')) return;
+  hideMenu();
+});
+
+document.getElementById('canvas-wrap').addEventListener('wheel', (ev) => {
+  if(!(ev.ctrlKey || ev.metaKey)) return;
+  ev.preventDefault();
+  if(ev.deltaY < 0) zoomIn(); else zoomOut();
+}, { passive: false });
+
+buildTimeline();
+loadState().then(applyZoom);
+</script>
+
+</body>
+</html>
