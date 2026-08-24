@@ -2,7 +2,7 @@
 
 An interactive, single-file HTML tool for visualizing how the classical works of Ḥanafī fiqh relate to one another — commentaries, footnotes, summaries, and books formed by combining multiple earlier works — arranged chronologically by century (Hijrī) based on each author's death date.
 
-**[Open the live board](https://YOUR-USERNAME.github.io/YOUR-REPO-NAME/)** *(update this link after enabling GitHub Pages — see below)*
+**[Open the live board](https://ark120701.github.io/hanafi-book-network/)**
 
 ## Features
 
