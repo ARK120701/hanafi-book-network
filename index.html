@@ -364,6 +364,16 @@
     color:#6b5d4f;
     font-style:italic;
   }
+  .popup-delete{
+    display:block;
+    margin-top:14px;
+    width:100%;
+    font-size:12.5px;
+    padding:6px 12px;
+    background:transparent;
+    color:var(--maroon);
+    border:1.5px solid var(--maroon);
+  }
   .popup-conn-header{
     margin-top:12px;
     font-size:12px;
@@ -443,11 +453,66 @@
     margin-top:12px;
     justify-content:flex-end;
   }
+
+  #bookSearch{
+    font-family:'Amiri', serif;
+    font-size:14px;
+    padding:7px 10px;
+    border:1.5px solid var(--line);
+    border-radius:5px;
+    background:#fffaf0;
+    color:var(--ink);
+    width:210px;
+  }
+  .search-results{
+    position:absolute;
+    top:100%;
+    left:0;
+    margin-top:4px;
+    background:#fffaf0;
+    border:1.5px solid var(--line);
+    border-radius:6px;
+    box-shadow:0 6px 18px rgba(43,35,32,0.25);
+    min-width:260px;
+    max-height:320px;
+    overflow-y:auto;
+    z-index:60;
+    display:none;
+  }
+  .search-result{
+    padding:8px 12px;
+    cursor:pointer;
+    border-bottom:1px solid rgba(138,115,85,0.2);
+    font-size:13.5px;
+    font-family:'Amiri', serif;
+  }
+  .search-result:last-child{ border-bottom:none; }
+  .search-result:hover, .search-result.active{
+    background:var(--parchment-deep);
+  }
+  .search-result .en{
+    display:block;
+    font-family:'Cairo', sans-serif;
+    font-style:italic;
+    font-size:11.5px;
+    color:#6b5d4f;
+  }
+  .search-empty{
+    padding:10px 12px;
+    font-size:13px;
+    color:#6b5d4f;
+    font-style:italic;
+  }
 </style>
 </head>
 <body>
 
   <div id="toolbar">
+    <div style="display:flex;align-items:center;gap:6px;position:relative;">
+      <input type="text" id="bookSearch" placeholder="🔍 اسم الكتاب / Search books" autocomplete="off" oninput="onSearchInput()" onkeydown="onSearchKeydown(event)">
+      <div id="searchResults" class="search-results"></div>
+    </div>
+
     <div class="admin-only" style="display:flex;align-items:center;gap:10px;">
       <input type="text" id="bookName" placeholder="اسم الكتاب / Book name" onkeydown="if(event.key==='Enter')addBook()">
       <button onclick="addBook()">+ Add book</button>
@@ -1951,6 +2016,96 @@ function onNodeClick(id, ev){
   }
 }
 
+let searchActiveIndex = -1;
+const COMBINING_DIACRITICS_RE = new RegExp(
+  '[' + String.fromCharCode(0x0300) + '-' + String.fromCharCode(0x036f) + ']', 'g'
+);
+
+function normalizeSearch(str){
+  return str
+    .normalize('NFD')
+    .replace(COMBINING_DIACRITICS_RE, '') // strip macrons, dots below, etc.
+    .replace(/[ʿʾ'’]/g, '') // strip ayn/hamza transliteration marks and apostrophes
+    .toLowerCase();
+}
+
+function onSearchInput(){
+  const q = normalizeSearch(document.getElementById('bookSearch').value.trim());
+  const resultsEl = document.getElementById('searchResults');
+  searchActiveIndex = -1;
+  if(!q){ resultsEl.style.display = 'none'; resultsEl.innerHTML = ''; return; }
+
+  const matches = state.nodes.filter(n => n.type !== 'combine' && normalizeSearch(n.name).includes(q)).slice(0, 20);
+
+  resultsEl.innerHTML = '';
+  if(matches.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'search-empty';
+    empty.textContent = 'No books found.';
+    resultsEl.appendChild(empty);
+  } else {
+    matches.forEach(n => {
+      const lines = n.name.split('\n');
+      const row = document.createElement('div');
+      row.className = 'search-result';
+      row.textContent = lines[0];
+      if(lines[1]){
+        const en = document.createElement('span');
+        en.className = 'en';
+        en.textContent = lines[1];
+        row.appendChild(en);
+      }
+      row.onclick = () => selectSearchResult(n.id);
+      resultsEl.appendChild(row);
+    });
+  }
+  resultsEl.style.display = 'block';
+}
+
+function onSearchKeydown(ev){
+  const resultsEl = document.getElementById('searchResults');
+  const rows = Array.from(resultsEl.querySelectorAll('.search-result'));
+  if(ev.key === 'Escape'){
+    resultsEl.style.display = 'none';
+    document.getElementById('bookSearch').blur();
+    return;
+  }
+  if(ev.key === 'Enter'){
+    ev.preventDefault();
+    if(rows.length > 0){
+      const idx = searchActiveIndex >= 0 ? searchActiveIndex : 0;
+      rows[idx].click();
+    }
+    return;
+  }
+  if(ev.key === 'ArrowDown' || ev.key === 'ArrowUp'){
+    if(rows.length === 0) return;
+    ev.preventDefault();
+    searchActiveIndex += ev.key === 'ArrowDown' ? 1 : -1;
+    if(searchActiveIndex < 0) searchActiveIndex = rows.length - 1;
+    if(searchActiveIndex >= rows.length) searchActiveIndex = 0;
+    rows.forEach((r,i) => r.classList.toggle('active', i === searchActiveIndex));
+    rows[searchActiveIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+
+function selectSearchResult(id){
+  document.getElementById('searchResults').style.display = 'none';
+  document.getElementById('bookSearch').value = '';
+  centerOnNode(id);
+  openNotesPopup(id);
+}
+
+function centerOnNode(id){
+  const node = state.nodes.find(n => n.id === id);
+  if(!node) return;
+  const wrap = document.getElementById('canvas-wrap');
+  const w = 220, h = 60; // approximate node footprint; good enough for centering
+  const targetLeft = (node.x + w / 2) * zoom - wrap.clientWidth / 2;
+  const targetTop = (node.y + h / 2) * zoom - wrap.clientHeight / 2;
+  wrap.scrollTo({ left: Math.max(0, targetLeft), top: Math.max(0, targetTop) });
+}
+
 function openNotesPopup(id){
   viewedNode = id;
   render();
@@ -2059,6 +2214,18 @@ function buildPopup(opts){
     box.appendChild(list);
   }
 
+  if(isAdmin && opts.deleteNodeId){
+    const delBtn = document.createElement('button');
+    delBtn.className = 'popup-delete';
+    delBtn.textContent = '🗑 Delete this book';
+    delBtn.onclick = () => {
+      if(confirm('Delete "' + opts.title + '"? This also removes its connections. This cannot be undone.')){
+        deleteNode(opts.deleteNodeId, { stopPropagation(){} });
+      }
+    };
+    box.appendChild(delBtn);
+  }
+
   return box;
 }
 
@@ -2078,7 +2245,8 @@ function renderPopups(){
     placeholder: 'Notes about this book...',
     statusKey: node.id + ':bookNotes',
     onSave: (val) => saveAndPublishNote(node.id, 'bookNotes', val),
-    connections: isAdmin ? getConnectionsFor(node.id) : null
+    connections: isAdmin ? getConnectionsFor(node.id) : null,
+    deleteNodeId: node.id
   }));
 
   container.appendChild(buildPopup({
@@ -2448,6 +2616,10 @@ function render(){
 }
 
 document.addEventListener('click', (ev) => {
+  if(!ev.target.closest('#bookSearch') && !ev.target.closest('.search-results')){
+    const resultsEl = document.getElementById('searchResults');
+    if(resultsEl) resultsEl.style.display = 'none';
+  }
   if(ev.target.closest('.node') || ev.target.closest('#menu') || ev.target.closest('#toolbar') || ev.target.closest('#notesPopups') || ev.target.closest('.export-overlay')) return;
   hideMenu();
   closeNotesPopup();
