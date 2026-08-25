@@ -1773,6 +1773,63 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  if(!state._authorBackfillV1){
+    // Books added before per-book author tracking existed never got an `author` field,
+    // so their author popup just showed "Author". Fill in the ones we know from the master list.
+    const authorById = {
+      mabsut: 'محمد بن الحسن الشيباني (d. 189H)',
+      jamisagh: 'محمد بن الحسن الشيباني (d. 189H)',
+      jamikab: 'محمد بن الحسن الشيباني (d. 189H)',
+      ziyadat: 'محمد بن الحسن الشيباني (d. 189H)',
+      siyarsagh: 'محمد بن الحسن الشيباني (d. 189H)',
+      siyarkab: 'محمد بن الحسن الشيباني (d. 189H)',
+      kafi: 'الحاكم الشهيد (d. 334H)',
+      qudoori: 'أبو الحسين القدوري (d. 428H)',
+      nasafimz: 'أبو حفص عمر النسفي (d. 537H)',
+      kanz: 'حافظ الدين النسفي (d. 710H)',
+      mukhtaar: 'عبد الله الموصلي (d. 683H)',
+      wiqriwaya: 'محمود بن صدر الشريعة (d. 673H)',
+      bidaya: 'أبو الحسن المرغيناني (d. 593H)',
+      majmabahrain: 'مظفر الدين ابن الساعاتي (d. 694H)',
+      multaqaabhur: 'إبراهيم الحلبي (d. 956H)',
+      mabsutsharh: 'شمس الأئمة السرخسي (d. 483H)',
+      hidayah: 'أبو الحسن المرغيناني (d. 593H)',
+      fathqadir: 'كمال الدين بن الهمام (d. 861H)',
+      inaya: 'أكمل الدين البابرتي (d. 786H)',
+      binaya: 'بدر الدين العيني (d. 855H)',
+      waafi: 'حافظ الدين النسفي (d. 710H)',
+      ramzhaqaiq: 'بدر الدين العيني (d. 855H)',
+      nahrfaiq: 'سراج الدين بن نجيم (d. 1005H)',
+      bahrraiq: 'زين الدين ابن نجيم (d. 970H)',
+      tabyinhaqaiq: 'فخر الدين الزيلعي (d. 743H)',
+      minhatkhaliq: 'ابن عابدين الشامي (d. 1252H)',
+      mukhtasartahawi: 'أبو جعفر أحمد الطحاوي (d. 321H)',
+      sharhtahawijassas: 'الإمام أبو بكر الجصاص (d. 370H)',
+      sharhtahawiisbijabi: 'شيخ الإسلام الإسبيجابي (d. 535H)',
+      ikhtiyar: 'عبد الله الموصلي (d. 683H)',
+      tuhfatfuqaha: 'علاء الدين السمرقندي (d. 539H)',
+      badaisanai: 'علاء الدين الكاساني (d. 587H)',
+      lubab: 'عبد الغني الميداني (d. 1289H)',
+      jawharanayyira: 'أبو بكر الحدادي (d. 800H)',
+      nuqayah: 'عبيد الله بن مسعود (d. 747H)',
+      fathbabinaya: 'الملا علي القاري الهروي (d. 1014H)',
+      jamirumuz: 'شمس الدين محمد القهستاني (d. 953H)',
+      sharhwiqaya: 'عبيد الله بن مسعود (d. 747H)',
+      umdatriaya: 'عبد الحي اللكنوي (d. 1304H)',
+      tanwirabsar: 'محمد بن عبد الله التمرتاشي (d. 1004H)',
+      durrmukhtar: 'علاء الدين الحصكفي (d. 1088H)',
+      ibnabidin: 'ابن عابدين الشامي (d. 1252H)',
+      tahtawifootnote: 'السيد أحمد الطحطاوي (d. 1231H)',
+      tawaliuanwar: 'محمد عابد السندي (d. 1051H)'
+    };
+    Object.keys(authorById).forEach(id => {
+      const n = state.nodes.find(x => x.id === id);
+      if(n && !n.author){ n.author = authorById[id]; }
+    });
+    state._authorBackfillV1 = true;
+    changed = true;
+  }
+
   if(!state._autoLayoutV2){
     computeLayoutV1();
     state._autoLayoutV2 = true;
