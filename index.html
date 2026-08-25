@@ -136,7 +136,7 @@
     font-family:'Cairo', sans-serif;
     font-weight:700;
     font-style:italic;
-    font-size:100px;
+    font-size:300px;
     line-height:1;
     color:rgba(166,118,63,0.16);
     white-space:nowrap;
@@ -1950,17 +1950,12 @@ function buildTimeline(){
     band.style.background = '#efe4d0';
     bg.appendChild(band);
 
-    const watermarkText = `${ENGLISH_ORDINALS[i]} Century AH`;
-    const WATERMARK_TILE_WIDTH = 1500;
-    const canvasWidth = 8300;
-    for(let tx = 60; tx < canvasWidth; tx += WATERMARK_TILE_WIDTH){
-      const watermark = document.createElement('div');
-      watermark.className = 'century-watermark';
-      watermark.style.left = tx + 'px';
-      watermark.style.top = (y + CENTURY_HEIGHT / 2) + 'px';
-      watermark.textContent = watermarkText;
-      bg.appendChild(watermark);
-    }
+    const watermark = document.createElement('div');
+    watermark.className = 'century-watermark';
+    watermark.style.left = '60px';
+    watermark.style.top = (y + CENTURY_HEIGHT / 2) + 'px';
+    watermark.textContent = `${ENGLISH_ORDINALS[i]} Century AH`;
+    bg.appendChild(watermark);
 
     const line = document.createElement('div');
     line.className = 'century-row';
