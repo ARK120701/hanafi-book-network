@@ -501,6 +501,26 @@
     color:#6b5d4f;
     margin-top:4px;
   }
+  .mini-diagram-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 14px;
+    margin-top:6px;
+    font-size:11px;
+    color:#6b5d4f;
+  }
+  .mini-diagram-legend-item{
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .mini-diagram-legend-swatch{
+    width:16px;
+    height:0;
+    border-top-width:2.5px;
+    border-top-style:solid;
+    display:inline-block;
+  }
 
   .export-overlay{
     position:fixed;
@@ -2626,8 +2646,31 @@ function truncateLabel(str, max){
   return str.length > max ? str.slice(0, max - 1) + '…' : str;
 }
 
-// Small standalone graph, drawn fresh each time: the clicked book at the center with
-// spokes out to every book computeHighlight() found connected to it.
+// Fixed palette for the mini diagram: connection type reads by color, not by the
+// source book's own color (which the main canvas uses).
+const MINI_TYPE_COLORS = {
+  commentary: '#171412',
+  summary: '#1f8a44',
+  footnote: '#c1272d',
+  merge: '#a6763f'
+};
+const MINI_TYPE_LABELS = {
+  commentary: 'Commentary',
+  summary: 'Summary',
+  footnote: 'Footnote',
+  merge: 'Combined into'
+};
+
+function pointAlong(x1, y1, x2, y2, distFromStart){
+  const dx = x2 - x1, dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const t = distFromStart / dist;
+  return [x1 + dx * t, y1 + dy * t];
+}
+
+// The clicked (highlighted) book sits at the top; everything connected to it is laid
+// out in a wrapped grid underneath, so it reads as "this book, and what points to/from it"
+// rather than a symmetric web.
 function buildMiniDiagramPopup(centerId, neighborIds){
   const centerNode = state.nodes.find(n => n.id === centerId);
   if(!centerNode) return null;
@@ -2649,18 +2692,45 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   }
 
   const svgNS = 'http://www.w3.org/2000/svg';
-  const W = 300, H = 260, cx = W / 2, cy = H / 2, R = 96;
-  const NODE_W = 76, NODE_H = 30, CENTER_W = 84, CENTER_H = 34;
+  const W = 300;
+  const NODE_W = 74, NODE_H = 28, CENTER_W = 96, CENTER_H = 34;
+  const TOP_Y = 30, GRID_TOP = 96, ROW_H = 48;
+  const COLS = Math.min(4, neighbors.length);
+  const rows = Math.ceil(neighbors.length / COLS);
+  const H = GRID_TOP + (rows - 1) * ROW_H + NODE_H / 2 + 20;
 
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
   svg.setAttribute('width', '100%');
   svg.setAttribute('height', H);
 
-  const positions = { [centerId]: [cx, cy] };
-  neighbors.forEach((n, i) => {
-    const angle = (i / neighbors.length) * Math.PI * 2 - Math.PI / 2;
-    positions[n.id] = [cx + R * Math.cos(angle), cy + R * Math.sin(angle)];
+  const positions = { [centerId]: [W / 2, TOP_Y] };
+  let placed = 0, row = 0;
+  while(placed < neighbors.length){
+    const itemsInRow = Math.min(COLS, neighbors.length - placed);
+    for(let c = 0; c < itemsInRow; c++){
+      positions[neighbors[placed].id] = [W * (c + 1) / (itemsInRow + 1), GRID_TOP + row * ROW_H];
+      placed++;
+    }
+    row++;
+  }
+
+  const defs = document.createElementNS(svgNS, 'defs');
+  svg.appendChild(defs);
+  Object.keys(MINI_TYPE_COLORS).forEach(type => {
+    const marker = document.createElementNS(svgNS, 'marker');
+    marker.setAttribute('id', 'mini-arrow-' + type);
+    marker.setAttribute('viewBox', '0 0 10 10');
+    marker.setAttribute('refX', '8');
+    marker.setAttribute('refY', '5');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('orient', 'auto');
+    const arrowShape = document.createElementNS(svgNS, 'path');
+    arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+    arrowShape.setAttribute('fill', MINI_TYPE_COLORS[type]);
+    marker.appendChild(arrowShape);
+    defs.appendChild(marker);
   });
 
   const edgesLayer = document.createElementNS(svgNS, 'g');
@@ -2668,20 +2738,26 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   svg.appendChild(edgesLayer);
   svg.appendChild(nodesLayer);
 
+  const usedTypes = new Set();
   neighbors.forEach(n => {
     const rel = relationToCenter(centerId, n.id);
-    const style = edgeStyle(rel.type);
-    const fromNode = state.nodes.find(x => x.id === rel.from) || centerNode;
-    const [x1, y1] = positions[rel.from] || positions[centerId];
-    const [x2, y2] = positions[rel.to] || positions[n.id];
+    const color = MINI_TYPE_COLORS[rel.type] || MINI_TYPE_COLORS.merge;
+    usedTypes.add(rel.type);
+    const [fx, fy] = positions[rel.from];
+    const [tx, ty] = positions[rel.to];
+    const startMargin = (rel.from === centerId ? CENTER_H : NODE_H) / 2 + 6;
+    const endMargin = (rel.to === centerId ? CENTER_H : NODE_H) / 2 + 6;
+    const totalDist = Math.max(Math.hypot(tx - fx, ty - fy), startMargin + endMargin + 1);
+    const [sx, sy] = pointAlong(fx, fy, tx, ty, startMargin);
+    const [ex, ey] = pointAlong(fx, fy, tx, ty, totalDist - endMargin);
 
     const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
-    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
-    line.setAttribute('stroke', fromNode.color || '#8a7355');
-    line.setAttribute('stroke-width', Math.min(style.width, 3));
-    if(style.dash !== 'none') line.setAttribute('stroke-dasharray', style.dash);
+    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.setAttribute('stroke', color);
+    line.setAttribute('stroke-width', 2);
     line.setAttribute('stroke-linecap', 'round');
+    line.setAttribute('marker-end', `url(#mini-arrow-${rel.type in MINI_TYPE_COLORS ? rel.type : 'merge'})`);
     edgesLayer.appendChild(line);
   });
 
@@ -2703,7 +2779,6 @@ function buildMiniDiagramPopup(centerId, neighborIds){
     rect.setAttribute('width', w);
     rect.setAttribute('height', hgt);
     rect.setAttribute('rx', 5);
-    if(!isCenter && n.color){ rect.setAttribute('stroke', n.color); rect.setAttribute('stroke-width', 1.5); }
     g.appendChild(rect);
 
     const text = document.createElementNS(svgNS, 'text');
@@ -2711,7 +2786,7 @@ function buildMiniDiagramPopup(centerId, neighborIds){
     text.setAttribute('x', w / 2);
     text.setAttribute('y', hgt / 2 + 3.5);
     text.setAttribute('text-anchor', 'middle');
-    text.textContent = truncateLabel(n.name.split('\n')[0], isCenter ? 14 : 11);
+    text.textContent = truncateLabel(n.name.split('\n')[0], isCenter ? 15 : 11);
     g.appendChild(text);
 
     nodesLayer.appendChild(g);
@@ -2721,6 +2796,23 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   neighbors.forEach(n => drawNode(n.id, n, false));
 
   box.appendChild(svg);
+
+  const legend = document.createElement('div');
+  legend.className = 'mini-diagram-legend';
+  Object.keys(MINI_TYPE_COLORS).filter(type => usedTypes.has(type)).forEach(type => {
+    const item = document.createElement('div');
+    item.className = 'mini-diagram-legend-item';
+    const swatch = document.createElement('span');
+    swatch.className = 'mini-diagram-legend-swatch';
+    swatch.style.borderTopColor = MINI_TYPE_COLORS[type];
+    item.appendChild(swatch);
+    const label = document.createElement('span');
+    label.textContent = MINI_TYPE_LABELS[type];
+    item.appendChild(label);
+    legend.appendChild(item);
+  });
+  box.appendChild(legend);
+
   return box;
 }
 
