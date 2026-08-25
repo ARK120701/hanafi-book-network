@@ -2006,11 +2006,12 @@ function buildTimeline(){
     line.style.top = y + 'px';
     el.appendChild(line);
 
-    const label = document.createElement('div');
-    label.className = 'century-label';
-    label.style.top = (y + 8) + 'px';
-    label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
-    el.appendChild(label);
+    // Hidden for now -- uncomment to bring back the century label boxes on the left.
+    // const label = document.createElement('div');
+    // label.className = 'century-label';
+    // label.style.top = (y + 8) + 'px';
+    // label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
+    // el.appendChild(label);
   }
   // closing line at the bottom of the last century
   const closingLine = document.createElement('div');
