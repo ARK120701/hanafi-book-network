@@ -1773,7 +1773,7 @@ function ensureExtraContent(){
     changed = true;
   }
 
-  if(!state._authorBackfillV1){
+  if(!state._authorBackfillV2){
     // Books added before per-book author tracking existed never got an `author` field,
     // so their author popup just showed "Author". Fill in the ones we know from the master list.
     const authorById = {
@@ -1820,13 +1820,17 @@ function ensureExtraContent(){
       durrmukhtar: 'علاء الدين الحصكفي (d. 1088H)',
       ibnabidin: 'ابن عابدين الشامي (d. 1252H)',
       tahtawifootnote: 'السيد أحمد الطحطاوي (d. 1231H)',
-      tawaliuanwar: 'محمد عابد السندي (d. 1051H)'
+      tawaliuanwar: 'محمد عابد السندي (d. 1051H)',
+      sharhminhatghaffar: 'محمد بن عبد الله التمرتاشي (d. 1004H)',
+      halabi: 'إبراهيم الحلبي (d. 956H)',
+      kafi2: 'عبد الله بن أحمد بن محمود النسفي (d. 710H)',
+      mustalkhas: 'إبراهيم بن محمد الليثي'
     };
     Object.keys(authorById).forEach(id => {
       const n = state.nodes.find(x => x.id === id);
       if(n && !n.author){ n.author = authorById[id]; }
     });
-    state._authorBackfillV1 = true;
+    state._authorBackfillV2 = true;
     changed = true;
   }
 
