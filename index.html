@@ -116,6 +116,19 @@
     pointer-events:none;
   }
 
+  #centuryBg{
+    position:absolute;
+    top:0; left:0;
+    width:8300px;
+    height:7600px;
+    pointer-events:none;
+    z-index:0;
+  }
+  .century-band{
+    position:absolute;
+    left:0;
+    width:100%;
+  }
   #timeline{
     position:absolute;
     top:0; left:0;
@@ -588,6 +601,7 @@
   <div id="canvas-wrap">
     <div id="zoom-sizer">
       <div id="canvas">
+        <div id="centuryBg"></div>
         <div id="timeline"></div>
         <svg id="lines"></svg>
       </div>
@@ -1909,9 +1923,18 @@ const ENGLISH_ORDINALS = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th',
 
 function buildTimeline(){
   const el = document.getElementById('timeline');
+  const bg = document.getElementById('centuryBg');
   el.innerHTML = '';
+  bg.innerHTML = '';
   for(let i=0;i<NUM_CENTURIES;i++){
     const y = CENTURY_START_Y + i * CENTURY_HEIGHT;
+
+    const band = document.createElement('div');
+    band.className = 'century-band';
+    band.style.top = y + 'px';
+    band.style.height = CENTURY_HEIGHT + 'px';
+    band.style.background = `hsl(${Math.round(i * (360 / NUM_CENTURIES))}, 32%, 91%)`;
+    bg.appendChild(band);
 
     const line = document.createElement('div');
     line.className = 'century-row';
