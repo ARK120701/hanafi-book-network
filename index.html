@@ -470,10 +470,19 @@
     padding:5px 10px;
   }
 
+  .mini-diagram{
+    /* Flex items default to min-width:auto, which lets a wide SVG child force this
+       card past the popup column's width instead of scrolling. Force it to shrink. */
+    min-width:0;
+  }
+  .mini-diagram-scroll{
+    margin-top:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    min-width:0;
+  }
   .mini-diagram svg{
     display:block;
-    margin-top:6px;
-    overflow:visible;
   }
   .mini-diagram .mini-node{ cursor:pointer; }
   .mini-diagram .mini-node rect{
@@ -2691,29 +2700,31 @@ function buildMiniDiagramPopup(centerId, neighborIds){
     return box;
   }
 
+  // Every neighbor sits in a single row below the center, all at the same y. A straight
+  // line from the center to any one of them only ever touches that shared y at its own
+  // endpoint, so no line can pass through another book's box -- unlike a wrapped multi-row
+  // grid, where a line to a lower row has to cross the row(s) above it. Rows wide enough to
+  // need more space than the popup just scroll horizontally instead of wrapping.
   const svgNS = 'http://www.w3.org/2000/svg';
-  const W = 300;
   const NODE_W = 74, NODE_H = 28, CENTER_W = 96, CENTER_H = 34;
-  const TOP_Y = 30, GRID_TOP = 96, ROW_H = 48;
-  const COLS = Math.min(4, neighbors.length);
-  const rows = Math.ceil(neighbors.length / COLS);
-  const H = GRID_TOP + (rows - 1) * ROW_H + NODE_H / 2 + 20;
+  const ITEM_GAP = 18, SIDE_PAD = 20;
+  const TOP_Y = 30, BOTTOM_Y = 130;
+  const H = BOTTOM_Y + NODE_H / 2 + 20;
+
+  const itemSpan = NODE_W + ITEM_GAP;
+  const rowContentWidth = neighbors.length * itemSpan - ITEM_GAP;
+  const W = Math.max(300, rowContentWidth + SIDE_PAD * 2);
 
   const svg = document.createElementNS(svgNS, 'svg');
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('width', '100%');
+  svg.setAttribute('width', W);
   svg.setAttribute('height', H);
 
+  const rowStartX = (W - rowContentWidth) / 2 + NODE_W / 2;
   const positions = { [centerId]: [W / 2, TOP_Y] };
-  let placed = 0, row = 0;
-  while(placed < neighbors.length){
-    const itemsInRow = Math.min(COLS, neighbors.length - placed);
-    for(let c = 0; c < itemsInRow; c++){
-      positions[neighbors[placed].id] = [W * (c + 1) / (itemsInRow + 1), GRID_TOP + row * ROW_H];
-      placed++;
-    }
-    row++;
-  }
+  neighbors.forEach((n, i) => {
+    positions[n.id] = [rowStartX + i * itemSpan, BOTTOM_Y];
+  });
 
   const defs = document.createElementNS(svgNS, 'defs');
   svg.appendChild(defs);
@@ -2795,7 +2806,10 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   drawNode(centerId, centerNode, true);
   neighbors.forEach(n => drawNode(n.id, n, false));
 
-  box.appendChild(svg);
+  const scroller = document.createElement('div');
+  scroller.className = 'mini-diagram-scroll';
+  scroller.appendChild(svg);
+  box.appendChild(scroller);
 
   const legend = document.createElement('div');
   legend.className = 'mini-diagram-legend';
@@ -2826,7 +2840,17 @@ function renderPopups(){
 
   const HL = computeHighlight(viewedNode);
   const miniDiagram = buildMiniDiagramPopup(viewedNode, Array.from(HL.nodeIds));
-  if(miniDiagram) container.appendChild(miniDiagram);
+  if(miniDiagram){
+    container.appendChild(miniDiagram);
+    // Center the scroll on the highlighted book -- only measurable now that the
+    // diagram is actually in the document and has a real layout box.
+    const scroller = miniDiagram.querySelector('.mini-diagram-scroll');
+    const svgEl = scroller && scroller.querySelector('svg');
+    if(scroller && svgEl){
+      const svgWidth = parseFloat(svgEl.getAttribute('width')) || 0;
+      scroller.scrollLeft = Math.max(0, svgWidth / 2 - scroller.clientWidth / 2);
+    }
+  }
 
   const lines = node.name.split('\n');
   container.appendChild(buildPopup({
