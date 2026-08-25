@@ -183,6 +183,8 @@
     user-select:none;
     white-space:nowrap;
     z-index:5;
+    opacity:1;
+    transition:opacity 0.15s ease;
   }
   body.admin .node{ cursor:grab; }
   .node.selected{
@@ -196,9 +198,12 @@
     border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(166,118,63,0.3);
   }
-  .node.combine-source{
+  .node.connected{
     border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(166,118,63,0.45);
+  }
+  .node.dimmed{
+    opacity:0.28;
   }
   .node.combine{
     width:22px;
@@ -463,6 +468,38 @@
   .popup-conn-submit{
     font-size:12.5px;
     padding:5px 10px;
+  }
+
+  .mini-diagram svg{
+    display:block;
+    margin-top:6px;
+    overflow:visible;
+  }
+  .mini-diagram .mini-node{ cursor:pointer; }
+  .mini-diagram .mini-node rect{
+    fill:linear-gradient(180deg,#fffaf0,var(--parchment-deep));
+    fill:var(--parchment-deep);
+    stroke:var(--line);
+    stroke-width:1.2;
+    transition:filter 0.15s ease;
+  }
+  .mini-diagram .mini-node:hover rect{ filter:brightness(0.93); }
+  .mini-diagram .mini-center rect{
+    fill:var(--maroon);
+    stroke:var(--maroon);
+  }
+  .mini-diagram .mini-center text{ fill:#fff8ee; }
+  .mini-diagram .mini-label{
+    font-family:'Cairo', sans-serif;
+    font-size:9.5px;
+    fill:var(--ink);
+    pointer-events:none;
+  }
+  .mini-diagram-empty{
+    font-size:12px;
+    font-style:italic;
+    color:#6b5d4f;
+    margin-top:4px;
   }
 
   .export-overlay{
@@ -2563,6 +2600,130 @@ function buildPopup(opts){
   return box;
 }
 
+// Figures out how `neighborId` relates to `centerId` for the mini diagram: which
+// edge type to draw and which end the arrow points to. Falls back to 'merge' for
+// relationships that only exist through a "+" combine node (no single direct edge).
+function relationToCenter(centerId, neighborId){
+  const direct = state.edges.find(e =>
+    (e.from === centerId && e.to === neighborId) || (e.from === neighborId && e.to === centerId));
+  if(direct) return { type: direct.type, from: direct.from, to: direct.to };
+
+  const plusNode = state.nodes.find(n => {
+    if(n.type !== 'combine') return false;
+    const edgesOfPlus = state.edges.filter(e => e.from === n.id || e.to === n.id);
+    const touchesCenter = edgesOfPlus.some(e => e.from === centerId || e.to === centerId);
+    const touchesNeighbor = edgesOfPlus.some(e => e.from === neighborId || e.to === neighborId);
+    return touchesCenter && touchesNeighbor;
+  });
+  if(plusNode){
+    const centerIsResult = state.edges.some(e => e.from === plusNode.id && e.to === centerId);
+    return centerIsResult ? { type: 'merge', from: neighborId, to: centerId } : { type: 'merge', from: centerId, to: neighborId };
+  }
+  return { type: 'merge', from: centerId, to: neighborId };
+}
+
+function truncateLabel(str, max){
+  return str.length > max ? str.slice(0, max - 1) + '…' : str;
+}
+
+// Small standalone graph, drawn fresh each time: the clicked book at the center with
+// spokes out to every book computeHighlight() found connected to it.
+function buildMiniDiagramPopup(centerId, neighborIds){
+  const centerNode = state.nodes.find(n => n.id === centerId);
+  if(!centerNode) return null;
+  const neighbors = neighborIds.map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
+
+  const box = document.createElement('div');
+  box.className = 'popup mini-diagram';
+
+  const h = document.createElement('h3');
+  h.textContent = 'Connections map';
+  box.appendChild(h);
+
+  if(neighbors.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'mini-diagram-empty';
+    empty.textContent = 'This book has no connections yet.';
+    box.appendChild(empty);
+    return box;
+  }
+
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const W = 300, H = 260, cx = W / 2, cy = H / 2, R = 96;
+  const NODE_W = 76, NODE_H = 30, CENTER_W = 84, CENTER_H = 34;
+
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', '100%');
+  svg.setAttribute('height', H);
+
+  const positions = { [centerId]: [cx, cy] };
+  neighbors.forEach((n, i) => {
+    const angle = (i / neighbors.length) * Math.PI * 2 - Math.PI / 2;
+    positions[n.id] = [cx + R * Math.cos(angle), cy + R * Math.sin(angle)];
+  });
+
+  const edgesLayer = document.createElementNS(svgNS, 'g');
+  const nodesLayer = document.createElementNS(svgNS, 'g');
+  svg.appendChild(edgesLayer);
+  svg.appendChild(nodesLayer);
+
+  neighbors.forEach(n => {
+    const rel = relationToCenter(centerId, n.id);
+    const style = edgeStyle(rel.type);
+    const fromNode = state.nodes.find(x => x.id === rel.from) || centerNode;
+    const [x1, y1] = positions[rel.from] || positions[centerId];
+    const [x2, y2] = positions[rel.to] || positions[n.id];
+
+    const line = document.createElementNS(svgNS, 'line');
+    line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+    line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+    line.setAttribute('stroke', fromNode.color || '#8a7355');
+    line.setAttribute('stroke-width', Math.min(style.width, 3));
+    if(style.dash !== 'none') line.setAttribute('stroke-dasharray', style.dash);
+    line.setAttribute('stroke-linecap', 'round');
+    edgesLayer.appendChild(line);
+  });
+
+  function drawNode(id, n, isCenter){
+    const [x, y] = positions[id];
+    const w = isCenter ? CENTER_W : NODE_W, hgt = isCenter ? CENTER_H : NODE_H;
+
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'mini-node' + (isCenter ? ' mini-center' : ''));
+    g.setAttribute('transform', `translate(${x - w / 2}, ${y - hgt / 2})`);
+    if(!isCenter){
+      g.onclick = () => { centerOnNode(id); openNotesPopup(id); };
+      const titleEl = document.createElementNS(svgNS, 'title');
+      titleEl.textContent = n.name.split('\n')[0];
+      g.appendChild(titleEl);
+    }
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', hgt);
+    rect.setAttribute('rx', 5);
+    if(!isCenter && n.color){ rect.setAttribute('stroke', n.color); rect.setAttribute('stroke-width', 1.5); }
+    g.appendChild(rect);
+
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('class', 'mini-label');
+    text.setAttribute('x', w / 2);
+    text.setAttribute('y', hgt / 2 + 3.5);
+    text.setAttribute('text-anchor', 'middle');
+    text.textContent = truncateLabel(n.name.split('\n')[0], isCenter ? 14 : 11);
+    g.appendChild(text);
+
+    nodesLayer.appendChild(g);
+  }
+
+  drawNode(centerId, centerNode, true);
+  neighbors.forEach(n => drawNode(n.id, n, false));
+
+  box.appendChild(svg);
+  return box;
+}
+
 function renderPopups(){
   const container = document.getElementById('notesPopups');
   container.innerHTML = '';
@@ -2570,6 +2731,10 @@ function renderPopups(){
   const node = state.nodes.find(n => n.id === viewedNode);
   if(!node){ viewedNode = null; container.style.display = 'none'; return; }
   container.style.display = 'flex';
+
+  const HL = computeHighlight(viewedNode);
+  const miniDiagram = buildMiniDiagramPopup(viewedNode, Array.from(HL.nodeIds));
+  if(miniDiagram) container.appendChild(miniDiagram);
 
   const lines = node.name.split('\n');
   container.appendChild(buildPopup({
@@ -2797,22 +2962,34 @@ function pickClearY(acx, bcx, ay, by, excludeIds, elMap){
   return literalMid;
 }
 
-// If id is a book formed by combining other books, returns the ids of those source
-// books plus the ids of every edge in that merge chain (source -> "+" -> result).
-function computeCombineHighlight(id){
-  const sourceIds = new Set();
+// Everything connected to `id`: the ids of the other real books it links to (nodeIds),
+// the "+" combine nodes on the way to those books (throughIds, so they don't get dimmed),
+// and every edge involved (edgeIds). A "+" combine node is a bookkeeping detail, not a real
+// book, so edges through it are followed one hop further to reach the real book on its far side.
+function computeHighlight(id){
+  const nodeIds = new Set();
+  const throughIds = new Set();
   const edgeIds = new Set();
-  if(!id) return { sourceIds, edgeIds };
-  state.edges.filter(e => e.type === 'merge' && e.to === id).forEach(e => {
+  if(!id) return { nodeIds, throughIds, edgeIds };
+  state.edges.forEach(e => {
+    if(e.from !== id && e.to !== id) return;
     edgeIds.add(e.id);
-    const plusNode = state.nodes.find(n => n.id === e.from);
-    if(!plusNode || plusNode.type !== 'combine') return;
-    state.edges.filter(e2 => e2.type === 'merge' && e2.to === plusNode.id).forEach(e2 => {
-      sourceIds.add(e2.from);
-      edgeIds.add(e2.id);
-    });
+    const otherId = e.from === id ? e.to : e.from;
+    const otherNode = state.nodes.find(n => n.id === otherId);
+    if(!otherNode) return;
+    if(otherNode.type === 'combine'){
+      throughIds.add(otherNode.id);
+      state.edges.forEach(e2 => {
+        if(e2.from !== otherNode.id && e2.to !== otherNode.id) return;
+        edgeIds.add(e2.id);
+        const realId = e2.from === otherNode.id ? e2.to : e2.from;
+        if(realId !== id) nodeIds.add(realId);
+      });
+    } else {
+      nodeIds.add(otherId);
+    }
   });
-  return { sourceIds, edgeIds };
+  return { nodeIds, throughIds, edgeIds };
 }
 
 function render(){
@@ -2822,7 +2999,7 @@ function render(){
   const canvas = document.getElementById('canvas');
   document.querySelectorAll('.node').forEach(n => n.remove());
 
-  const combineHL = computeCombineHighlight(viewedNode);
+  const HL = computeHighlight(viewedNode);
 
   const elMap = {};
   state.nodes.forEach(n => {
@@ -2834,7 +3011,8 @@ function render(){
     if(combineSet.has(n.id)) cls += ' multiselect';
     if(n.manuscript) cls += ' manuscript';
     if(viewedNode === n.id) cls += ' viewed';
-    if(combineHL.sourceIds.has(n.id)) cls += ' combine-source';
+    if(HL.nodeIds.has(n.id)) cls += ' connected';
+    if(viewedNode && n.id !== viewedNode && !HL.nodeIds.has(n.id) && !HL.throughIds.has(n.id)) cls += ' dimmed';
     div.className = cls;
     div.style.left = n.x + 'px';
     div.style.top = n.y + 'px';
@@ -2926,7 +3104,7 @@ function render(){
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
-    const isHL = !!viewedNode && (e.from === viewedNode || e.to === viewedNode || combineHL.edgeIds.has(e.id));
+    const isHL = !!viewedNode && HL.edgeIds.has(e.id);
     const dimmed = !!viewedNode && !isHL;
     const widthMul = isHL ? 1.7 : 1;
 
