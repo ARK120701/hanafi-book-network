@@ -414,6 +414,39 @@
     font-style:italic;
     color:#6b5d4f;
   }
+  .popup-conn-add{
+    margin-top:8px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .popup-conn-add select{
+    font-family:'Cairo', sans-serif;
+    font-size:12.5px;
+    padding:5px 6px;
+    border:1.5px solid var(--line);
+    border-radius:5px;
+    background:#fffaf0;
+    color:var(--ink);
+    width:100%;
+  }
+  .popup-conn-add-row{
+    display:flex;
+    gap:6px;
+  }
+  .popup-conn-direction{
+    font-size:12px;
+    background:transparent;
+    color:var(--ink);
+    border:1.5px solid var(--line);
+    padding:5px 8px;
+    text-align:center;
+    white-space:nowrap;
+  }
+  .popup-conn-submit{
+    font-size:12.5px;
+    padding:5px 10px;
+  }
 
   .export-overlay{
     position:fixed;
@@ -605,6 +638,7 @@ let combineMode = false;
 let combineSet = new Set();
 let connectMode = false;
 let viewedNode = null;
+let connAddState = { targetId: '', type: 'commentary', reversed: false };
 let zoom = 1;
 const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
 const STORAGE_KEY = 'hanafi-book-network';
@@ -2136,6 +2170,7 @@ function centerOnNode(id){
 
 function openNotesPopup(id){
   viewedNode = id;
+  connAddState = { targetId: '', type: 'commentary', reversed: false };
   render();
 }
 
@@ -2162,6 +2197,76 @@ function removeConnection(edgeId){
   state.edges = state.edges.filter(e => e.id !== edgeId);
   saveState();
   render();
+}
+
+function addConnection(nodeId){
+  if(!isAdmin || !connAddState.targetId) return;
+  const from = connAddState.reversed ? connAddState.targetId : nodeId;
+  const to = connAddState.reversed ? nodeId : connAddState.targetId;
+  state.edges.push({ id: uid(), from, to, type: connAddState.type });
+  saveState();
+  render();
+}
+
+function buildAddConnectionForm(nodeId){
+  const otherBooks = state.nodes
+    .filter(n => n.id !== nodeId && n.type !== 'combine')
+    .slice()
+    .sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  if(!connAddState.targetId || !otherBooks.some(n => n.id === connAddState.targetId)){
+    connAddState.targetId = otherBooks[0] ? otherBooks[0].id : '';
+  }
+
+  const wrap = document.createElement('div');
+  wrap.className = 'popup-conn-add';
+  if(otherBooks.length === 0) return wrap;
+
+  const bookSelect = document.createElement('select');
+  otherBooks.forEach(n => {
+    const opt = document.createElement('option');
+    opt.value = n.id;
+    opt.textContent = n.name.split('\n')[0];
+    bookSelect.appendChild(opt);
+  });
+  bookSelect.value = connAddState.targetId;
+  bookSelect.onchange = () => { connAddState.targetId = bookSelect.value; };
+  wrap.appendChild(bookSelect);
+
+  const typeSelect = document.createElement('select');
+  [
+    ['commentary', 'Commentary — bold line'],
+    ['footnote', 'Footnote — dashed line'],
+    ['summary', 'Summary — dotted line']
+  ].forEach(([val, label]) => {
+    const opt = document.createElement('option');
+    opt.value = val;
+    opt.textContent = label;
+    typeSelect.appendChild(opt);
+  });
+  typeSelect.value = connAddState.type;
+  typeSelect.onchange = () => { connAddState.type = typeSelect.value; };
+  wrap.appendChild(typeSelect);
+
+  const row = document.createElement('div');
+  row.className = 'popup-conn-add-row';
+
+  const dirBtn = document.createElement('button');
+  dirBtn.type = 'button';
+  dirBtn.className = 'popup-conn-direction';
+  dirBtn.textContent = connAddState.reversed ? 'selected → this book' : 'this book → selected';
+  dirBtn.title = 'Click to flip the connection direction';
+  dirBtn.onclick = () => { connAddState.reversed = !connAddState.reversed; render(); };
+  row.appendChild(dirBtn);
+
+  const addBtn = document.createElement('button');
+  addBtn.type = 'button';
+  addBtn.className = 'popup-conn-submit';
+  addBtn.textContent = '+ Add connection';
+  addBtn.onclick = () => addConnection(nodeId);
+  row.appendChild(addBtn);
+
+  wrap.appendChild(row);
+  return wrap;
 }
 
 function buildPopup(opts){
@@ -2240,6 +2345,10 @@ function buildPopup(opts){
       });
     }
     box.appendChild(list);
+
+    if(isAdmin && opts.deleteNodeId){
+      box.appendChild(buildAddConnectionForm(opts.deleteNodeId));
+    }
   }
 
   if(isAdmin && opts.deleteNodeId){
