@@ -1759,6 +1759,12 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  if(!state._autoLayoutV1){
+    computeLayoutV1();
+    state._autoLayoutV1 = true;
+    changed = true;
+  }
+
   state.nodes.forEach(n => {
     if(n.type !== 'combine' && !n.color){
       n.color = nextColor();
@@ -1767,6 +1773,106 @@ function ensureExtraContent(){
   });
 
   if(changed) saveState();
+}
+
+// Reorders and spaces connected books within each century row (books with no connections,
+// already parked in their own grid above, are left alone) so commentary/footnote/summary
+// lines route around book boxes instead of through them. Century row placement itself is
+// left untouched — it comes from each node's existing y, established by the hand-placed
+// positions and fixups above.
+function computeLayoutV1(){
+  const LEFT_MARGIN = 60;
+  const COL_GAP = 50;
+
+  function estimateWidth(n){
+    if(n.type === 'combine') return 22;
+    const lines = n.name.split('\n');
+    const maxLen = Math.max(...lines.map(l => l.length));
+    return Math.max(90, Math.round(maxLen * 13) + 50);
+  }
+
+  const rowOf = n => Math.max(0, Math.min(NUM_CENTURIES - 1, Math.round((n.y - CENTURY_START_Y) / CENTURY_HEIGHT)));
+
+  const realBooks = state.nodes.filter(n => n.type !== 'combine');
+  const combineNodes = state.nodes.filter(n => n.type === 'combine');
+
+  // A book counts as "connected" if it has a non-merge edge, or is a source/result of a combine.
+  const connectedIds = new Set();
+  state.edges.forEach(e => {
+    if(e.type === 'merge') return;
+    connectedIds.add(e.from);
+    connectedIds.add(e.to);
+  });
+  combineNodes.forEach(plus => {
+    state.edges.filter(e => e.type === 'merge' && e.to === plus.id).forEach(e => connectedIds.add(e.from));
+    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    if(resultEdge) connectedIds.add(resultEdge.to);
+  });
+
+  // Logical adjacency for ordering: direct edges between real books, plus source<->result
+  // pairs bridged through each combine "+" marker (so merged books pull toward each other).
+  const neighbors = {};
+  realBooks.forEach(n => { neighbors[n.id] = []; });
+  state.edges.forEach(e => {
+    if(e.type === 'merge') return;
+    const a = state.nodes.find(n => n.id === e.from);
+    const b = state.nodes.find(n => n.id === e.to);
+    if(!a || !b || a.type === 'combine' || b.type === 'combine') return;
+    neighbors[a.id].push(b);
+    neighbors[b.id].push(a);
+  });
+  combineNodes.forEach(plus => {
+    const sources = state.edges.filter(e => e.type === 'merge' && e.to === plus.id)
+      .map(e => state.nodes.find(n => n.id === e.from)).filter(Boolean);
+    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    const result = resultEdge ? state.nodes.find(n => n.id === resultEdge.to) : null;
+    if(!result) return;
+    sources.forEach(s => {
+      neighbors[s.id].push(result);
+      neighbors[result.id].push(s);
+    });
+  });
+
+  const rows = {};
+  for(let r = 0; r < NUM_CENTURIES; r++) rows[r] = [];
+  realBooks.filter(n => connectedIds.has(n.id)).forEach(n => rows[rowOf(n)].push(n));
+  Object.values(rows).forEach(list => list.sort((a, b) => a.x - b.x));
+
+  function layoutRow(list){
+    let x = LEFT_MARGIN;
+    list.forEach(n => { n.x = x; x += estimateWidth(n) + COL_GAP; });
+  }
+  Object.values(rows).forEach(layoutRow);
+
+  // Barycenter sweeps: pull each book toward the average x of what it's connected to,
+  // re-spacing its row each pass, so related books drift into aligned columns.
+  for(let pass = 0; pass < 5; pass++){
+    for(let r = 0; r < NUM_CENTURIES; r++){
+      const list = rows[r];
+      if(list.length < 2) continue;
+      const keyed = list.map(n => {
+        const ns = neighbors[n.id];
+        const avg = ns.length ? ns.reduce((s, o) => s + o.x, 0) / ns.length : n.x;
+        return { n, avg };
+      });
+      keyed.sort((p, q) => p.avg - q.avg || p.n.id.localeCompare(q.n.id));
+      rows[r] = keyed.map(k => k.n);
+      layoutRow(rows[r]);
+    }
+  }
+
+  // Combine "+" markers follow their (now repositioned) source books.
+  combineNodes.forEach(plus => {
+    const sources = state.edges.filter(e => e.type === 'merge' && e.to === plus.id)
+      .map(e => state.nodes.find(n => n.id === e.from)).filter(Boolean);
+    if(sources.length === 0) return;
+    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    const result = resultEdge ? state.nodes.find(n => n.id === resultEdge.to) : null;
+    const avgX = sources.reduce((s, n) => s + n.x, 0) / sources.length;
+    const maxY = Math.max(...sources.map(n => n.y));
+    plus.x = avgX - 6;
+    plus.y = result ? (maxY + result.y) / 2 - 8 : maxY + 90;
+  });
 }
 
 function seedDefaultState(){
@@ -1796,7 +1902,9 @@ function uid(){ return 'n' + Math.random().toString(36).slice(2,9); }
 const CENTURY_HEIGHT = 450;
 const CENTURY_START_Y = 40;
 const NUM_CENTURIES = 16;
-const ARABIC_ORDINALS = ['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر','الثالث عشر','الرابع عشر','الخامس عشر','السادس عشر'];
+const ROW_BOUNDARIES = [];
+for(let __k = 0; __k <= NUM_CENTURIES; __k++) ROW_BOUNDARIES.push(CENTURY_START_Y + __k * CENTURY_HEIGHT);
+const ARABIC_ORDINALS =['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر','الثالث عشر','الرابع عشر','الخامس عشر','السادس عشر'];
 const ENGLISH_ORDINALS = ['1st','2nd','3rd','4th','5th','6th','7th','8th','9th','10th','11th','12th','13th','14th','15th','16th'];
 
 function buildTimeline(){
@@ -2559,6 +2667,47 @@ function edgeColor(a, b){
   return (a && a.color) || '#8a7355';
 }
 
+function nodeBoxFor(n, elMap){
+  const el = elMap[n.id];
+  const w = el ? el.offsetWidth : (n.type === 'combine' ? 22 : 160);
+  const h = el ? el.offsetHeight : (n.type === 'combine' ? 22 : 40);
+  return { left: n.x, right: n.x + w, top: n.y, bottom: n.y + h };
+}
+
+// Picks a y for an edge's horizontal jog that clears every book box it would otherwise cross.
+// Prefers the empty gutter between century rows, then the literal midpoint, then a fine sweep.
+function pickClearY(acx, bcx, ay, by, excludeIds, elMap){
+  const lo = Math.min(ay, by), hi = Math.max(ay, by);
+  const x1 = Math.min(acx, bcx), x2 = Math.max(acx, bcx);
+  const literalMid = (ay + by) / 2;
+  if(x2 - x1 < 1) return literalMid; // no horizontal segment to worry about
+
+  const boundaries = ROW_BOUNDARIES
+    .filter(y => y > lo + 2 && y < hi - 2)
+    .sort((p, q) => Math.abs(p - literalMid) - Math.abs(q - literalMid));
+
+  const candidates = [...boundaries, literalMid];
+  for(let step = 15; step <= 200; step += 15){
+    if(literalMid - step > lo) candidates.push(literalMid - step);
+    if(literalMid + step < hi) candidates.push(literalMid + step);
+  }
+
+  const PAD = 6;
+  for(const y of candidates){
+    let hit = false;
+    for(const n of state.nodes){
+      if(excludeIds.has(n.id)) continue;
+      const box = nodeBoxFor(n, elMap);
+      if(y >= box.top - PAD && y <= box.bottom + PAD && x1 <= box.right + PAD && x2 >= box.left - PAD){
+        hit = true;
+        break;
+      }
+    }
+    if(!hit) return y;
+  }
+  return literalMid;
+}
+
 function render(){
   updateHint();
   updateModeButtons();
@@ -2663,7 +2812,7 @@ function render(){
       ay = a.y;
       by = b.y + bh;
     }
-    const ymid = (ay + by) / 2;
+    const ymid = pickClearY(acx, bcx, ay, by, new Set([a.id, b.id]), elMap);
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
