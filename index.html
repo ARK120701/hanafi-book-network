@@ -129,20 +129,6 @@
     left:0;
     width:100%;
   }
-  .century-watermark{
-    position:absolute;
-    top:50%;
-    transform:translateY(-50%);
-    font-family:'Cairo', sans-serif;
-    font-weight:700;
-    font-style:italic;
-    font-size:300px;
-    line-height:1;
-    color:rgba(166,118,63,0.16);
-    white-space:nowrap;
-    user-select:none;
-    pointer-events:none;
-  }
   #timeline{
     position:absolute;
     top:0; left:0;
@@ -1787,9 +1773,9 @@ function ensureExtraContent(){
     changed = true;
   }
 
-  if(!state._autoLayoutV1){
+  if(!state._autoLayoutV2){
     computeLayoutV1();
-    state._autoLayoutV1 = true;
+    state._autoLayoutV2 = true;
     changed = true;
   }
 
@@ -1809,7 +1795,7 @@ function ensureExtraContent(){
 // left untouched — it comes from each node's existing y, established by the hand-placed
 // positions and fixups above.
 function computeLayoutV1(){
-  const LEFT_MARGIN = 60;
+  const LEFT_MARGIN = 280;
   const COL_GAP = 50;
 
   function estimateWidth(n){
@@ -1949,13 +1935,6 @@ function buildTimeline(){
     band.style.height = CENTURY_HEIGHT + 'px';
     band.style.background = '#efe4d0';
     bg.appendChild(band);
-
-    const watermark = document.createElement('div');
-    watermark.className = 'century-watermark';
-    watermark.style.left = '60px';
-    watermark.style.top = (y + CENTURY_HEIGHT / 2) + 'px';
-    watermark.textContent = `${ENGLISH_ORDINALS[i]} Century AH`;
-    bg.appendChild(watermark);
 
     const line = document.createElement('div');
     line.className = 'century-row';
