@@ -129,6 +129,20 @@
     left:0;
     width:100%;
   }
+  .century-watermark{
+    position:absolute;
+    left:260px;
+    top:50%;
+    transform:translateY(-50%);
+    font-family:'Amiri', serif;
+    font-weight:700;
+    font-size:320px;
+    line-height:1;
+    color:rgba(166,118,63,0.13);
+    white-space:nowrap;
+    user-select:none;
+    pointer-events:none;
+  }
   #timeline{
     position:absolute;
     top:0; left:0;
@@ -1933,8 +1947,14 @@ function buildTimeline(){
     band.className = 'century-band';
     band.style.top = y + 'px';
     band.style.height = CENTURY_HEIGHT + 'px';
-    band.style.background = `hsl(${Math.round(i * (360 / NUM_CENTURIES))}, 32%, 91%)`;
+    band.style.background = '#efe4d0';
     bg.appendChild(band);
+
+    const watermark = document.createElement('div');
+    watermark.className = 'century-watermark';
+    watermark.style.top = (y + CENTURY_HEIGHT / 2) + 'px';
+    watermark.textContent = (i + 1).toLocaleString('ar-EG');
+    bg.appendChild(watermark);
 
     const line = document.createElement('div');
     line.className = 'century-row';
