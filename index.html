@@ -1034,6 +1034,19 @@ function ensureExtraContent(){
     addNode({ id:'hadiyyasuluk', name:'هديةُ الصّعلوك شرح تحفة الملوك\nHadiyyat al-Ṣuʿlūk Sharḥ Tuḥfat al-Mulūk', x:1340, y:4225, author:'أبو الليث محرم الزيلي (d. 1000H)' });
     addNode({ id:'harawniyyat', name:'الهارونيات\nAl-Harawniyyāt', x:1130, y:625, author:'محمد بن الحسن الشيباني (d. 189H)' });
 
+  // Commentaries on al-Jami' al-Sagheer, al-Jami' al-Kabir, and al-Ziyadat weren't wired to their base texts
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh1', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh2', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh3', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh4', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh5', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh6', type:'commentary' });
+  addEdge({ id: uid(), from:'jamisagh', to:'sharhjamisagh7', type:'commentary' });
+  addEdge({ id: uid(), from:'jamikab', to:'tahrirjamikab', type:'commentary' });
+  addEdge({ id: uid(), from:'jamikab', to:'wajizjamikab', type:'commentary' });
+  addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat1', type:'commentary' });
+  addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat2', type:'commentary' });
+
 
   if(!state._qudooriNextToMabsut){
     const q = state.nodes.find(n => n.id === 'qudoori');
