@@ -530,6 +530,11 @@
     border-top-style:solid;
     display:inline-block;
   }
+  .mini-diagram-legend-plus{
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:0.5px;
+  }
 
   .export-overlay{
     position:fixed;
@@ -2729,6 +2734,26 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   const defs = document.createElementNS(svgNS, 'defs');
   svg.appendChild(defs);
   Object.keys(MINI_TYPE_COLORS).forEach(type => {
+    if(type === 'merge'){
+      // "Combined into" reads as a line of small plus signs instead of an arrow,
+      // echoing the "+" combine node it always passes through.
+      const marker = document.createElementNS(svgNS, 'marker');
+      marker.setAttribute('id', 'mini-plus');
+      marker.setAttribute('viewBox', '0 0 10 10');
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('markerWidth', '6');
+      marker.setAttribute('markerHeight', '6');
+      marker.setAttribute('orient', '0');
+      const plus = document.createElementNS(svgNS, 'path');
+      plus.setAttribute('d', 'M 5 1.5 L 5 8.5 M 1.5 5 L 8.5 5');
+      plus.setAttribute('stroke', MINI_TYPE_COLORS.merge);
+      plus.setAttribute('stroke-width', '2');
+      plus.setAttribute('stroke-linecap', 'round');
+      marker.appendChild(plus);
+      defs.appendChild(marker);
+      return;
+    }
     const marker = document.createElementNS(svgNS, 'marker');
     marker.setAttribute('id', 'mini-arrow-' + type);
     marker.setAttribute('viewBox', '0 0 10 10');
@@ -2762,14 +2787,32 @@ function buildMiniDiagramPopup(centerId, neighborIds){
     const [sx, sy] = pointAlong(fx, fy, tx, ty, startMargin);
     const [ex, ey] = pointAlong(fx, fy, tx, ty, totalDist - endMargin);
 
-    const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('x1', sx); line.setAttribute('y1', sy);
-    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
-    line.setAttribute('stroke', color);
-    line.setAttribute('stroke-width', 2);
-    line.setAttribute('stroke-linecap', 'round');
-    line.setAttribute('marker-end', `url(#mini-arrow-${rel.type in MINI_TYPE_COLORS ? rel.type : 'merge'})`);
-    edgesLayer.appendChild(line);
+    if(rel.type === 'merge'){
+      const segLen = Math.hypot(ex - sx, ey - sy);
+      const steps = Math.max(2, Math.min(7, Math.round(segLen / 20)));
+      const pts = [];
+      for(let i = 0; i <= steps; i++){
+        const t = i / steps;
+        pts.push([sx + (ex - sx) * t, sy + (ey - sy) * t]);
+      }
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', pts.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' '));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'none');
+      path.setAttribute('marker-start', 'url(#mini-plus)');
+      path.setAttribute('marker-mid', 'url(#mini-plus)');
+      path.setAttribute('marker-end', 'url(#mini-plus)');
+      edgesLayer.appendChild(path);
+    } else {
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+      line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', 2);
+      line.setAttribute('stroke-linecap', 'round');
+      line.setAttribute('marker-end', `url(#mini-arrow-${rel.type})`);
+      edgesLayer.appendChild(line);
+    }
   });
 
   function drawNode(id, n, isCenter){
@@ -2816,10 +2859,18 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   Object.keys(MINI_TYPE_COLORS).filter(type => usedTypes.has(type)).forEach(type => {
     const item = document.createElement('div');
     item.className = 'mini-diagram-legend-item';
-    const swatch = document.createElement('span');
-    swatch.className = 'mini-diagram-legend-swatch';
-    swatch.style.borderTopColor = MINI_TYPE_COLORS[type];
-    item.appendChild(swatch);
+    if(type === 'merge'){
+      const swatch = document.createElement('span');
+      swatch.className = 'mini-diagram-legend-plus';
+      swatch.style.color = MINI_TYPE_COLORS.merge;
+      swatch.textContent = '+ + +';
+      item.appendChild(swatch);
+    } else {
+      const swatch = document.createElement('span');
+      swatch.className = 'mini-diagram-legend-swatch';
+      swatch.style.borderTopColor = MINI_TYPE_COLORS[type];
+      item.appendChild(swatch);
+    }
     const label = document.createElement('span');
     label.textContent = MINI_TYPE_LABELS[type];
     item.appendChild(label);
@@ -3095,12 +3146,19 @@ function computeHighlight(id){
     if(!otherNode) return;
     if(otherNode.type === 'combine'){
       throughIds.add(otherNode.id);
-      state.edges.forEach(e2 => {
-        if(e2.from !== otherNode.id && e2.to !== otherNode.id) return;
-        edgeIds.add(e2.id);
-        const realId = e2.from === otherNode.id ? e2.to : e2.from;
-        if(realId !== id) nodeIds.add(realId);
-      });
+      if(e.from === id){
+        // id feeds into this "+" -> the only real connection is the single book that
+        // comes out the other side. Sibling books that feed the same "+" aren't
+        // connected to id, just to that same result -- don't leak them in here.
+        const resultEdge = state.edges.find(e2 => e2.from === otherNode.id);
+        if(resultEdge){ edgeIds.add(resultEdge.id); nodeIds.add(resultEdge.to); }
+      } else {
+        // id IS the merge result -> every book that fed into it is a real connection.
+        state.edges.filter(e2 => e2.to === otherNode.id).forEach(e2 => {
+          edgeIds.add(e2.id);
+          nodeIds.add(e2.from);
+        });
+      }
     } else {
       nodeIds.add(otherId);
     }
