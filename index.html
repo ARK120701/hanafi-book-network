@@ -100,8 +100,8 @@
 
   #canvas{
     position:relative;
-    width:8300px;
-    height:7600px;
+    width:7450px;
+    height:7050px;
     transform-origin:0 0;
     background-image:
       radial-gradient(circle at 20% 15%, rgba(166,118,63,0.06), transparent 40%),
@@ -111,16 +111,16 @@
   svg#lines{
     position:absolute;
     top:0; left:0;
-    width:8300px;
-    height:7600px;
+    width:7450px;
+    height:7050px;
     pointer-events:none;
   }
 
   #centuryBg{
     position:absolute;
     top:0; left:0;
-    width:8300px;
-    height:7600px;
+    width:7450px;
+    height:7050px;
     pointer-events:none;
     z-index:0;
   }
@@ -132,8 +132,8 @@
   #timeline{
     position:absolute;
     top:0; left:0;
-    width:8300px;
-    height:7600px;
+    width:7450px;
+    height:7050px;
     pointer-events:none;
     z-index:1;
   }
@@ -2036,8 +2036,8 @@ function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (8300 * zoom) + 'px';
-  sizer.style.height = (7600 * zoom) + 'px';
+  sizer.style.width = (7450 * zoom) + 'px';
+  sizer.style.height = (7050 * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
 
