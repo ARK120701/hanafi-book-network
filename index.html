@@ -196,6 +196,10 @@
     border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(166,118,63,0.3);
   }
+  .node.combine-source{
+    border-color:var(--gold);
+    box-shadow:0 0 0 3px rgba(166,118,63,0.45);
+  }
   .node.combine{
     width:22px;
     height:22px;
@@ -2792,12 +2796,32 @@ function pickClearY(acx, bcx, ay, by, excludeIds, elMap){
   return literalMid;
 }
 
+// If id is a book formed by combining other books, returns the ids of those source
+// books plus the ids of every edge in that merge chain (source -> "+" -> result).
+function computeCombineHighlight(id){
+  const sourceIds = new Set();
+  const edgeIds = new Set();
+  if(!id) return { sourceIds, edgeIds };
+  state.edges.filter(e => e.type === 'merge' && e.to === id).forEach(e => {
+    edgeIds.add(e.id);
+    const plusNode = state.nodes.find(n => n.id === e.from);
+    if(!plusNode || plusNode.type !== 'combine') return;
+    state.edges.filter(e2 => e2.type === 'merge' && e2.to === plusNode.id).forEach(e2 => {
+      sourceIds.add(e2.from);
+      edgeIds.add(e2.id);
+    });
+  });
+  return { sourceIds, edgeIds };
+}
+
 function render(){
   updateHint();
   updateModeButtons();
 
   const canvas = document.getElementById('canvas');
   document.querySelectorAll('.node').forEach(n => n.remove());
+
+  const combineHL = computeCombineHighlight(viewedNode);
 
   const elMap = {};
   state.nodes.forEach(n => {
@@ -2809,6 +2833,7 @@ function render(){
     if(combineSet.has(n.id)) cls += ' multiselect';
     if(n.manuscript) cls += ' manuscript';
     if(viewedNode === n.id) cls += ' viewed';
+    if(combineHL.sourceIds.has(n.id)) cls += ' combine-source';
     div.className = cls;
     div.style.left = n.x + 'px';
     div.style.top = n.y + 'px';
@@ -2900,7 +2925,7 @@ function render(){
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
-    const isHL = !!viewedNode && (e.from === viewedNode || e.to === viewedNode);
+    const isHL = !!viewedNode && (e.from === viewedNode || e.to === viewedNode || combineHL.edgeIds.has(e.id));
     const dimmed = !!viewedNode && !isHL;
     const widthMul = isHL ? 1.7 : 1;
 
