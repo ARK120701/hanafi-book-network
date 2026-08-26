@@ -1915,6 +1915,16 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  // The old palette only had 12 colors cycling across 165 books, so most books (and their
+  // lines, which take the color of the book they come from) shared a color with a dozen
+  // others. Re-roll every book's color once against the wider, evenly-spread palette below.
+  if(!state._colorPaletteV2){
+    state._colorIndex = 0;
+    state.nodes.forEach(n => { if(n.type !== 'combine') delete n.color; });
+    state._colorPaletteV2 = true;
+    changed = true;
+  }
+
   state.nodes.forEach(n => {
     if(n.type !== 'combine' && !n.color){
       n.color = nextColor();
@@ -2091,17 +2101,28 @@ function buildTimeline(){
   el.appendChild(closingLine);
 }
 
-const COLOR_PALETTE = [
-  '#2f6f4f', '#1d5b8a', '#7a4fa3', '#b5651d',
-  '#5a7d1f', '#0e7c86', '#8a3a5c', '#4a4a8a',
-  '#a67c00', '#2e8b8b', '#6b3fa0', '#3f6b3f'
-];
+function hslToHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
 
+// Generates one color per call, each as far as possible from every color generated before
+// it: hue advances by the golden angle (~137.5°) so no run of hues ever bunches up, however
+// many books there end up being, and lightness/saturation cycle in step so two colors that
+// do land on a similar hue still read apart. Kept dark/muted enough (L <= 44%, since the
+// parchment background is very light) to stay legible as both a 2px book border and a line.
+// Returned as hex (not hsl(...)) so it stays compatible with the <input type=color> picker.
 function nextColor(){
   if(state._colorIndex === undefined) state._colorIndex = 0;
-  const c = COLOR_PALETTE[state._colorIndex % COLOR_PALETTE.length];
-  state._colorIndex++;
-  return c;
+  const i = state._colorIndex++;
+  const hue = Math.round((i * 137.50776) % 360);
+  const sat = [50, 65][i % 2];
+  const light = [30, 37, 44][i % 3];
+  return hslToHex(hue, sat, light);
 }
 
 function applyZoom(){
