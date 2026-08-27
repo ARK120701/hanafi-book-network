@@ -535,6 +535,12 @@
     font-size:11px;
     letter-spacing:0.5px;
   }
+  .mini-diagram-legend-note{
+    margin-top:4px;
+    font-size:11px;
+    font-style:italic;
+    color:#6b5d4f;
+  }
 
   .export-overlay{
     position:fixed;
@@ -1932,6 +1938,21 @@ function ensureExtraContent(){
     }
   });
 
+  // Books with no commentary/footnote/summary/combine connection at all -- the ones parked
+  // in their own grid on the right by computeLayoutV1 -- get no lines, so a distinct color
+  // on them doesn't communicate anything. Leave them plain black for now.
+  if(!state._blackenUnconnectedV1){
+    const connectedIds = computeConnectedIds();
+    state.nodes.forEach(n => {
+      if(n.type !== 'combine' && !connectedIds.has(n.id)){
+        n.color = UNCONNECTED_COLOR;
+        changed = true;
+      }
+    });
+    state._blackenUnconnectedV1 = true;
+    changed = true;
+  }
+
   if(changed) saveState();
 }
 
@@ -1940,6 +1961,26 @@ function ensureExtraContent(){
 // lines route around book boxes instead of through them. Century row placement itself is
 // left untouched — it comes from each node's existing y, established by the hand-placed
 // positions and fixups above.
+// A book counts as "connected" if it has a commentary/footnote/summary edge, or is a
+// source/result of a combine. Everything else is an island with no line ever touching it
+// (parked in its own grid on the right by computeLayoutV1) -- shared with the color
+// assignment below, which keeps those islands neutral instead of giving them a color that
+// implies a connection they don't have.
+function computeConnectedIds(){
+  const connectedIds = new Set();
+  state.edges.forEach(e => {
+    if(e.type === 'merge') return;
+    connectedIds.add(e.from);
+    connectedIds.add(e.to);
+  });
+  state.nodes.filter(n => n.type === 'combine').forEach(plus => {
+    state.edges.filter(e => e.type === 'merge' && e.to === plus.id).forEach(e => connectedIds.add(e.from));
+    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    if(resultEdge) connectedIds.add(resultEdge.to);
+  });
+  return connectedIds;
+}
+
 function computeLayoutV1(){
   const LEFT_MARGIN = 280;
   const COL_GAP = 50;
@@ -1955,19 +1996,7 @@ function computeLayoutV1(){
 
   const realBooks = state.nodes.filter(n => n.type !== 'combine');
   const combineNodes = state.nodes.filter(n => n.type === 'combine');
-
-  // A book counts as "connected" if it has a non-merge edge, or is a source/result of a combine.
-  const connectedIds = new Set();
-  state.edges.forEach(e => {
-    if(e.type === 'merge') return;
-    connectedIds.add(e.from);
-    connectedIds.add(e.to);
-  });
-  combineNodes.forEach(plus => {
-    state.edges.filter(e => e.type === 'merge' && e.to === plus.id).forEach(e => connectedIds.add(e.from));
-    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
-    if(resultEdge) connectedIds.add(resultEdge.to);
-  });
+  const connectedIds = computeConnectedIds();
 
   // Logical adjacency for ordering: direct edges between real books, plus source<->result
   // pairs bridged through each combine "+" marker (so merged books pull toward each other).
@@ -2100,6 +2129,8 @@ function buildTimeline(){
   closingLine.style.top = (CENTURY_START_Y + NUM_CENTURIES * CENTURY_HEIGHT) + 'px';
   el.appendChild(closingLine);
 }
+
+const UNCONNECTED_COLOR = '#000000';
 
 function hslToHex(h, s, l){
   s /= 100; l /= 100;
@@ -2681,19 +2712,18 @@ function truncateLabel(str, max){
   return str.length > max ? str.slice(0, max - 1) + '…' : str;
 }
 
-// Fixed palette for the mini diagram: connection type reads by color, not by the
-// source book's own color (which the main canvas uses).
-const MINI_TYPE_COLORS = {
-  commentary: '#171412',
-  summary: '#1f8a44',
-  footnote: '#c1272d',
-  merge: '#a6763f'
-};
+// Same key as the main board: type reads by line style, color reads as the book the line
+// comes from (state.nodes[id].color) -- not a fixed per-type palette.
 const MINI_TYPE_LABELS = {
-  commentary: 'Commentary',
-  summary: 'Summary',
-  footnote: 'Footnote',
+  commentary: 'Commentary — arrows',
+  footnote: 'Footnote — dashed',
+  summary: 'Summary — dotted',
   merge: 'Combined into'
+};
+const MINI_TYPE_DASH = {
+  commentary: 'none',
+  footnote: '5,4',
+  summary: '0.1,6'
 };
 
 function pointAlong(x1, y1, x2, y2, distFromStart){
@@ -2754,41 +2784,51 @@ function buildMiniDiagramPopup(centerId, neighborIds){
 
   const defs = document.createElementNS(svgNS, 'defs');
   svg.appendChild(defs);
-  Object.keys(MINI_TYPE_COLORS).forEach(type => {
-    if(type === 'merge'){
-      // "Combined into" reads as a line of small plus signs instead of an arrow,
-      // echoing the "+" combine node it always passes through.
-      const marker = document.createElementNS(svgNS, 'marker');
-      marker.setAttribute('id', 'mini-plus');
-      marker.setAttribute('viewBox', '0 0 10 10');
+
+  // Markers are per-color (not per-type, since color is now per-book), so they're built
+  // on demand and cached here to avoid a duplicate <marker> for every line that happens to
+  // share a book's color.
+  const markerIds = new Map();
+  function ensureMarker(kind, color, build){
+    const key = kind + '|' + color;
+    if(markerIds.has(key)) return markerIds.get(key);
+    const id = 'mini-' + kind + '-' + markerIds.size;
+    const marker = document.createElementNS(svgNS, 'marker');
+    marker.setAttribute('id', id);
+    marker.setAttribute('viewBox', '0 0 10 10');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '6');
+    build(marker, color);
+    defs.appendChild(marker);
+    markerIds.set(key, id);
+    return id;
+  }
+  function ensureArrowMarker(color){
+    return ensureMarker('arrow', color, (marker) => {
+      marker.setAttribute('refX', '8');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('orient', 'auto');
+      const arrowShape = document.createElementNS(svgNS, 'path');
+      arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+      arrowShape.setAttribute('fill', color);
+      marker.appendChild(arrowShape);
+    });
+  }
+  function ensurePlusMarker(color){
+    // "Combined into" reads as a line of small plus signs instead of an arrow,
+    // echoing the "+" combine node it always passes through.
+    return ensureMarker('plus', color, (marker) => {
       marker.setAttribute('refX', '5');
       marker.setAttribute('refY', '5');
-      marker.setAttribute('markerWidth', '6');
-      marker.setAttribute('markerHeight', '6');
       marker.setAttribute('orient', '0');
       const plus = document.createElementNS(svgNS, 'path');
       plus.setAttribute('d', 'M 5 1.5 L 5 8.5 M 1.5 5 L 8.5 5');
-      plus.setAttribute('stroke', MINI_TYPE_COLORS.merge);
+      plus.setAttribute('stroke', color);
       plus.setAttribute('stroke-width', '2');
       plus.setAttribute('stroke-linecap', 'round');
       marker.appendChild(plus);
-      defs.appendChild(marker);
-      return;
-    }
-    const marker = document.createElementNS(svgNS, 'marker');
-    marker.setAttribute('id', 'mini-arrow-' + type);
-    marker.setAttribute('viewBox', '0 0 10 10');
-    marker.setAttribute('refX', '8');
-    marker.setAttribute('refY', '5');
-    marker.setAttribute('markerWidth', '6');
-    marker.setAttribute('markerHeight', '6');
-    marker.setAttribute('orient', 'auto');
-    const arrowShape = document.createElementNS(svgNS, 'path');
-    arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-    arrowShape.setAttribute('fill', MINI_TYPE_COLORS[type]);
-    marker.appendChild(arrowShape);
-    defs.appendChild(marker);
-  });
+    });
+  }
 
   const edgesLayer = document.createElementNS(svgNS, 'g');
   const nodesLayer = document.createElementNS(svgNS, 'g');
@@ -2798,7 +2838,8 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   const usedTypes = new Set();
   neighbors.forEach(n => {
     const rel = relationToCenter(centerId, n.id);
-    const color = MINI_TYPE_COLORS[rel.type] || MINI_TYPE_COLORS.merge;
+    const fromNode = state.nodes.find(x => x.id === rel.from);
+    const color = (fromNode && fromNode.color) || '#8a7355';
     usedTypes.add(rel.type);
     const [fx, fy] = positions[rel.from];
     const [tx, ty] = positions[rel.to];
@@ -2820,18 +2861,21 @@ function buildMiniDiagramPopup(centerId, neighborIds){
       path.setAttribute('d', pts.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' '));
       path.setAttribute('fill', 'none');
       path.setAttribute('stroke', 'none');
-      path.setAttribute('marker-start', 'url(#mini-plus)');
-      path.setAttribute('marker-mid', 'url(#mini-plus)');
-      path.setAttribute('marker-end', 'url(#mini-plus)');
+      const plusMarker = `url(#${ensurePlusMarker(color)})`;
+      path.setAttribute('marker-start', plusMarker);
+      path.setAttribute('marker-mid', plusMarker);
+      path.setAttribute('marker-end', plusMarker);
       edgesLayer.appendChild(path);
     } else {
       const line = document.createElementNS(svgNS, 'line');
       line.setAttribute('x1', sx); line.setAttribute('y1', sy);
       line.setAttribute('x2', ex); line.setAttribute('y2', ey);
       line.setAttribute('stroke', color);
-      line.setAttribute('stroke-width', 2);
+      line.setAttribute('stroke-width', rel.type === 'commentary' ? 2.2 : 2);
       line.setAttribute('stroke-linecap', 'round');
-      line.setAttribute('marker-end', `url(#mini-arrow-${rel.type})`);
+      const dash = MINI_TYPE_DASH[rel.type];
+      if(dash && dash !== 'none') line.setAttribute('stroke-dasharray', dash);
+      if(rel.type === 'commentary') line.setAttribute('marker-end', `url(#${ensureArrowMarker(color)})`);
       edgesLayer.appendChild(line);
     }
   });
@@ -2875,21 +2919,29 @@ function buildMiniDiagramPopup(centerId, neighborIds){
   scroller.appendChild(svg);
   box.appendChild(scroller);
 
+  // Same key as the toolbar legend above the board: style says the connection type
+  // (arrows / dashed / dotted / plus-signs), a plain neutral swatch color -- book color is
+  // explained separately below, since it names the book, not the type.
   const legend = document.createElement('div');
   legend.className = 'mini-diagram-legend';
-  Object.keys(MINI_TYPE_COLORS).filter(type => usedTypes.has(type)).forEach(type => {
+  Object.keys(MINI_TYPE_LABELS).filter(type => usedTypes.has(type)).forEach(type => {
     const item = document.createElement('div');
     item.className = 'mini-diagram-legend-item';
-    if(type === 'merge'){
-      const swatch = document.createElement('span');
-      swatch.className = 'mini-diagram-legend-plus';
-      swatch.style.color = MINI_TYPE_COLORS.merge;
-      swatch.textContent = '+ + +';
-      item.appendChild(swatch);
+    if(type === 'commentary'){
+      const symbol = document.createElement('span');
+      symbol.textContent = '➤➤➤';
+      item.appendChild(symbol);
+    } else if(type === 'merge'){
+      const symbol = document.createElement('span');
+      symbol.className = 'mini-diagram-legend-plus';
+      symbol.textContent = '+ + +';
+      item.appendChild(symbol);
     } else {
       const swatch = document.createElement('span');
       swatch.className = 'mini-diagram-legend-swatch';
-      swatch.style.borderTopColor = MINI_TYPE_COLORS[type];
+      swatch.style.borderTopColor = '#8a7355';
+      swatch.style.borderTopStyle = type === 'footnote' ? 'dashed' : 'dotted';
+      if(type === 'summary') swatch.style.borderTopWidth = '4px';
       item.appendChild(swatch);
     }
     const label = document.createElement('span');
@@ -2898,6 +2950,11 @@ function buildMiniDiagramPopup(centerId, neighborIds){
     legend.appendChild(item);
   });
   box.appendChild(legend);
+
+  const colorNote = document.createElement('div');
+  colorNote.className = 'mini-diagram-legend-note';
+  colorNote.textContent = 'Line color = the book it comes from';
+  box.appendChild(colorNote);
 
   return box;
 }
@@ -3116,38 +3173,216 @@ function nodeBoxFor(n, elMap){
   return { left: n.x, right: n.x + w, top: n.y, bottom: n.y + h };
 }
 
-// Picks a y for an edge's horizontal jog that clears every book box it would otherwise cross.
-// Prefers the empty gutter between century rows, then the literal midpoint, then a fine sweep.
-function pickClearY(acx, bcx, ay, by, excludeIds, elMap){
+// Every edge elbow is two vertical legs plus one horizontal jog -- always axis-aligned --
+// so both "does this leg hit that box" and "do these two legs hit each other" reduce to
+// simple 1D range-overlap checks per axis, no general line-segment math needed.
+function segHitsBox(seg, box, pad){
+  if(seg.y1 === seg.y2){ // horizontal leg
+    const y = seg.y1, x1 = Math.min(seg.x1, seg.x2), x2 = Math.max(seg.x1, seg.x2);
+    return y >= box.top - pad && y <= box.bottom + pad && x1 <= box.right + pad && x2 >= box.left - pad;
+  }
+  const x = seg.x1, y1 = Math.min(seg.y1, seg.y2), y2 = Math.max(seg.y1, seg.y2); // vertical leg
+  return x >= box.left - pad && x <= box.right + pad && y1 <= box.bottom + pad && y2 >= box.top - pad;
+}
+
+function segHitsSeg(a, b, pad){
+  const aHoriz = a.y1 === a.y2, bHoriz = b.y1 === b.y2;
+  if(aHoriz && bHoriz){
+    if(Math.abs(a.y1 - b.y1) > pad) return false;
+    const ax1 = Math.min(a.x1, a.x2), ax2 = Math.max(a.x1, a.x2);
+    const bx1 = Math.min(b.x1, b.x2), bx2 = Math.max(b.x1, b.x2);
+    return ax1 <= bx2 + pad && ax2 >= bx1 - pad;
+  }
+  if(!aHoriz && !bHoriz){
+    if(Math.abs(a.x1 - b.x1) > pad) return false;
+    const ay1 = Math.min(a.y1, a.y2), ay2 = Math.max(a.y1, a.y2);
+    const by1 = Math.min(b.y1, b.y2), by2 = Math.max(b.y1, b.y2);
+    return ay1 <= by2 + pad && ay2 >= by1 - pad;
+  }
+  const h = aHoriz ? a : b, v = aHoriz ? b : a; // one of each -> perpendicular crossing test
+  const hx1 = Math.min(h.x1, h.x2), hx2 = Math.max(h.x1, h.x2);
+  const vy1 = Math.min(v.y1, v.y2), vy2 = Math.max(v.y1, v.y2);
+  return v.x1 >= hx1 - pad && v.x1 <= hx2 + pad && h.y1 >= vy1 - pad && h.y1 <= vy2 + pad;
+}
+
+function segsFromPoints(points, from, to){
+  const segs = [];
+  for(let i = 0; i < points.length - 1; i++){
+    segs.push({ x1: points[i][0], y1: points[i][1], x2: points[i+1][0], y2: points[i+1][1], from, to });
+  }
+  return segs;
+}
+
+// Routes a same-or-adjacent-row edge's elbow (vertical / horizontal jog / vertical),
+// searching for a jog height and small endpoint offsets so the path clears every book box
+// it isn't attached to AND every edge already routed earlier in this same render pass -- a
+// simple sequential channel router: each edge becomes an obstacle for the ones drawn after
+// it. Segments belonging to an edge that shares a book with this one are never treated as
+// obstacles, so lines fanning out of (or into) the same book still start from a shared point
+// instead of being forced apart.
+function routeEdgeLocal(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments){
+  const PAD = 6, USED_PAD = 2;
   const lo = Math.min(ay, by), hi = Math.max(ay, by);
-  const x1 = Math.min(acx, bcx), x2 = Math.max(acx, bcx);
   const literalMid = (ay + by) / 2;
-  if(x2 - x1 < 1) return literalMid; // no horizontal segment to worry about
+  const excludeIds = new Set([a.id, b.id]);
 
-  const boundaries = ROW_BOUNDARIES
-    .filter(y => y > lo + 2 && y < hi - 2)
-    .sort((p, q) => Math.abs(p - literalMid) - Math.abs(q - literalMid));
-
-  const candidates = [...boundaries, literalMid];
-  for(let step = 15; step <= 200; step += 15){
-    if(literalMid - step > lo) candidates.push(literalMid - step);
-    if(literalMid + step < hi) candidates.push(literalMid + step);
+  function yCandidates(x1, x2){
+    if(x2 - x1 < 1) return [literalMid];
+    const boundaries = ROW_BOUNDARIES
+      .filter(y => y > lo + 2 && y < hi - 2)
+      .sort((p, q) => Math.abs(p - literalMid) - Math.abs(q - literalMid));
+    const list = [...boundaries, literalMid];
+    for(let step = 15; step <= 200; step += 15){
+      if(literalMid - step > lo) list.push(literalMid - step);
+      if(literalMid + step < hi) list.push(literalMid + step);
+    }
+    return list;
   }
 
-  const PAD = 6;
-  for(const y of candidates){
-    let hit = false;
+  // Scores a candidate path instead of a plain yes/no: a book box hit counts for far more
+  // than a crossing with another line, so if nothing in the search comes back fully clear,
+  // whatever's picked as a last resort at least never cuts through an unrelated book.
+  function collisionScore(segs){
+    let score = 0;
     for(const n of state.nodes){
       if(excludeIds.has(n.id)) continue;
-      const box = nodeBoxFor(n, elMap);
-      if(y >= box.top - PAD && y <= box.bottom + PAD && x1 <= box.right + PAD && x2 >= box.left - PAD){
-        hit = true;
-        break;
+      const box = nodeBoxes[n.id];
+      for(const seg of segs) if(segHitsBox(seg, box, PAD)) score += 500;
+    }
+    for(const used of usedSegments){
+      if(excludeIds.has(used.from) || excludeIds.has(used.to)) continue;
+      for(const seg of segs) if(segHitsSeg(seg, used, USED_PAD)) score += 1;
+    }
+    return score;
+  }
+
+  const OFFSETS = [0, 12, -12, 24, -24, 36, -36];
+  const maxAOff = Math.max(0, aw / 2 - 10);
+  const maxBOff = Math.max(0, bw / 2 - 10);
+
+  let best = null, bestScore = Infinity;
+  for(const aOff of OFFSETS){
+    if(Math.abs(aOff) > maxAOff) continue;
+    for(const bOff of OFFSETS){
+      if(Math.abs(bOff) > maxBOff) continue;
+      const acx = acxDefault + aOff, bcx = bcxDefault + bOff;
+      for(const ymid of yCandidates(Math.min(acx, bcx), Math.max(acx, bcx))){
+        const points = [[acx, ay], [acx, ymid], [bcx, ymid], [bcx, by]];
+        const segs = segsFromPoints(points, a.id, b.id);
+        const score = collisionScore(segs);
+        if(score === 0) return { points, segs };
+        if(score < bestScore){ bestScore = score; best = { points, segs }; }
       }
     }
-    if(!hit) return y;
   }
-  return literalMid;
+
+  // Nothing fully clear within the search budget (rare) -- use whatever scored lowest
+  // (book-box hits weighted far above line crossings) rather than an unchecked guess.
+  return best;
+}
+
+// Reserved, otherwise-empty strip to the left of every book column (books start at
+// LEFT_MARGIN=280; century labels that would sit here are currently hidden). Long-distance
+// edges -- most commentary/summary/footnote chains span several centuries -- get routed
+// through a dedicated vertical lane in this strip instead of straight through however many
+// unrelated rows lie between source and target, which is what was cutting through other
+// books' columns before. `lanes` is shared across one render pass so simultaneous long edges
+// get distinct lanes, while edges whose y-ranges don't overlap can reuse the same one.
+const TRUNK_MARGIN_MIN = 40, TRUNK_MARGIN_MAX = 260, TRUNK_LANE_SPACING = 8;
+
+function routeEdgeTrunk(a, b, ay, by, acx, bcx, nodeBoxes, usedSegments, lanes){
+  const PAD = 6, USED_PAD = 2;
+  const excludeIds = new Set([a.id, b.id]);
+  const dir = by >= ay ? 1 : -1;
+
+  // Scores a candidate path instead of a plain yes/no: a book box hit counts for far more
+  // than a crossing with another line, so if nothing in the search comes back fully clear,
+  // whatever's picked as a last resort at least never cuts through an unrelated book.
+  function collisionScore(segs){
+    let score = 0;
+    for(const n of state.nodes){
+      if(excludeIds.has(n.id)) continue;
+      const box = nodeBoxes[n.id];
+      for(const seg of segs) if(segHitsBox(seg, box, PAD)) score += 500;
+    }
+    for(const used of usedSegments){
+      if(excludeIds.has(used.from) || excludeIds.has(used.to)) continue;
+      for(const seg of segs) if(segHitsSeg(seg, used, USED_PAD)) score += 1;
+    }
+    return score;
+  }
+
+  // Candidates are tried nearest-first: a handful of positions close to the edge's own
+  // column (so a book sitting far from the margin, like most of the board, doesn't have to
+  // jog all the way across it when a nearer gap between other books would already clear it),
+  // then existing lanes whose reservations don't overlap this edge's y-range, then a fresh
+  // lane as the last resort. Nothing is reserved here; the caller only commits once a
+  // combination actually clears isClear(), so a failed attempt never leaves a stale
+  // reservation behind.
+  function candidateLaneXs(y1, y2){
+    const xs = [];
+    const localBase = Math.min(acx, bcx);
+    [0, 80, 160, 240, 320, 420, 550, 700, 900, 1150].forEach(step => {
+      const x = localBase - step;
+      if(x > TRUNK_MARGIN_MIN) xs.push(x);
+    });
+    for(const lane of lanes){
+      const overlaps = lane.intervals.some(([iy1, iy2]) => !(y2 < iy1 - 10 || y1 > iy2 + 10));
+      if(!overlaps) xs.push(lane.x);
+    }
+    xs.push(Math.min(TRUNK_MARGIN_MIN + lanes.length * TRUNK_LANE_SPACING, TRUNK_MARGIN_MAX));
+    return xs;
+  }
+
+  function commitLane(laneX, y1, y2){
+    let lane = lanes.find(l => l.x === laneX);
+    if(!lane){ lane = { x: laneX, intervals: [] }; lanes.push(lane); }
+    lane.intervals.push([y1, y2]);
+  }
+
+  const GAPS = [24, 40, 60, 90, 130, 180, 240];
+  let best = null, bestScore = Infinity, bestLaneX = null, bestYTop = 0, bestYBot = 0;
+  for(const gap of GAPS){
+    const yNearA = ay + dir * gap;
+    const yNearB = by - dir * gap;
+    const yTop = Math.min(yNearA, yNearB), yBot = Math.max(yNearA, yNearB);
+    for(const laneX of candidateLaneXs(yTop, yBot)){
+      const points = [[acx, ay], [acx, yNearA], [laneX, yNearA], [laneX, yNearB], [bcx, yNearB], [bcx, by]];
+      const segs = segsFromPoints(points, a.id, b.id);
+      const score = collisionScore(segs);
+      if(score === 0){
+        commitLane(laneX, yTop, yBot);
+        return { points, segs };
+      }
+      if(score < bestScore){
+        bestScore = score;
+        best = { points, segs };
+        bestLaneX = laneX; bestYTop = yTop; bestYBot = yBot;
+      }
+    }
+  }
+
+  // Nothing fully clear within the search budget (rare) -- use whatever scored lowest
+  // (book-box hits weighted far above line crossings) rather than an unchecked guess.
+  commitLane(bestLaneX, bestYTop, bestYBot);
+  return best;
+}
+
+// A book's "row" is which century band its y falls in. Edges within the same or an adjacent
+// row are routed locally (short elbow, searched for a clear jog); edges spanning 2+ rows --
+// most commentary/summary chains, since they connect books centuries apart -- are routed
+// through the dedicated trunk lanes instead, so they never sweep through intervening rows.
+function routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, lanes){
+  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
+  const spanRows = Math.abs(rowOf(a.y) - rowOf(b.y));
+  const spanX = Math.abs(acxDefault - bcxDefault);
+  // A same-row edge between two far-apart books has the same problem as a multi-row one --
+  // its jog has to sweep past however many books sit between them -- so it gets the same
+  // trunk treatment even though it never crosses a century boundary.
+  if(spanRows >= 2 || spanX > 500){
+    return routeEdgeTrunk(a, b, ay, by, acxDefault, bcxDefault, nodeBoxes, usedSegments, lanes);
+  }
+  return routeEdgeLocal(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments);
 }
 
 // Everything connected to `id`: the ids of the other real books it links to (nodeIds),
@@ -3266,27 +3501,55 @@ function render(){
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   svg.appendChild(defs);
 
-  function subdivideElbow(p1, p2, p3, p4, segsPerLeg){
-    const pts = [p1];
-    const legs = [[p1,p2],[p2,p3],[p3,p4]];
-    legs.forEach(([from,to]) => {
-      for(let i=1;i<=segsPerLeg;i++){
-        const t = i/segsPerLeg;
+  // points is a variable-length polyline (4 points for a local elbow, 6 for a trunk-routed
+  // one) -- subdivide every leg the same way regardless of how many there are.
+  function subdivideElbow(points, segsPerLeg){
+    const pts = [points[0]];
+    for(let i = 0; i < points.length - 1; i++){
+      const from = points[i], to = points[i+1];
+      for(let s = 1; s <= segsPerLeg; s++){
+        const t = s / segsPerLeg;
         pts.push([ from[0] + (to[0]-from[0])*t, from[1] + (to[1]-from[1])*t ]);
       }
-    });
+    }
     return pts;
   }
 
-  state.edges.forEach(e => {
-    const a = state.nodes.find(n => n.id === e.from);
-    const b = state.nodes.find(n => n.id === e.to);
-    if(!a || !b) return;
+  // Every node's box, read from the DOM once up front. routeEdge's collision search reads
+  // this hundreds of times per edge -- going through elMap.offsetWidth/offsetHeight that
+  // often forces a browser layout recalculation on nearly every call, which is what made
+  // routing the whole board take seconds; a plain object lookup doesn't.
+  const nodeBoxes = {};
+  state.nodes.forEach(n => { nodeBoxes[n.id] = nodeBoxFor(n, elMap); });
+
+  // Route every edge first, hardest (most century rows spanned, so least room to dodge)
+  // first, so those get first pick of the trunk lanes and the open margin, and easier/local
+  // edges route around whatever's already been placed -- rather than whatever order edges
+  // happen to appear in state.edges. Drawing below still follows that original order (so
+  // z-stacking / admin click targets don't shuffle), just looking up the route computed here.
+  const nodeById = {};
+  state.nodes.forEach(n => { nodeById[n.id] = n; });
+  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
+  const edgeSpan = e => {
+    const a = nodeById[e.from], b = nodeById[e.to];
+    if(!a || !b) return 0;
+    // Row span dominates the ordering; a wide same-row hop (routeEdge's other trunk trigger)
+    // still floats ahead of short local edges via the x-distance term.
+    return Math.abs(rowOf(a.y) - rowOf(b.y)) * 100000 + Math.abs(a.x - b.x);
+  };
+  const routingOrder = state.edges.filter(e => nodeById[e.from] && nodeById[e.to])
+    .slice().sort((e1, e2) => edgeSpan(e2) - edgeSpan(e1));
+
+  const usedSegments = [];
+  const trunkLanes = [];
+  const routeById = {};
+  routingOrder.forEach(e => {
+    const a = nodeById[e.from], b = nodeById[e.to];
     const aEl = elMap[a.id], bEl = elMap[b.id];
     const aw = aEl ? aEl.offsetWidth : 120, ah = aEl ? aEl.offsetHeight : 40;
     const bw = bEl ? bEl.offsetWidth : 120, bh = bEl ? bEl.offsetHeight : 40;
 
-    const acx = a.x + aw/2, bcx = b.x + bw/2;
+    const acxDefault = a.x + aw/2, bcxDefault = b.x + bw/2;
     let ay, by;
     if(b.y >= a.y){
       ay = a.y + ah;
@@ -3295,7 +3558,16 @@ function render(){
       ay = a.y;
       by = b.y + bh;
     }
-    const ymid = pickClearY(acx, bcx, ay, by, new Set([a.id, b.id]), elMap);
+    const route = routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, trunkLanes);
+    usedSegments.push(...route.segs);
+    routeById[e.id] = route;
+  });
+
+  state.edges.forEach(e => {
+    const a = nodeById[e.from];
+    const b = nodeById[e.to];
+    if(!a || !b) return;
+    const points = routeById[e.id].points;
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
@@ -3311,8 +3583,7 @@ function render(){
     if(isHL) path.style.filter = 'drop-shadow(0 0 3px rgba(122,46,46,0.6))';
 
     if(e.type === 'commentary'){
-      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
-      const pts = subdivideElbow(p1, p2, p3, p4, 5);
+      const pts = subdivideElbow(points, 5);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', 1.8 * widthMul);
@@ -3335,8 +3606,7 @@ function render(){
       path.setAttribute('marker-mid', `url(#${markerId})`);
       path.setAttribute('marker-end', `url(#${markerId})`);
     } else if(e.type === 'merge'){
-      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
-      const pts = subdivideElbow(p1, p2, p3, p4, 14);
+      const pts = subdivideElbow(points, 14);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', 1.2 * widthMul);
@@ -3359,7 +3629,7 @@ function render(){
       path.setAttribute('marker-mid', `url(#${markerId})`);
       path.setAttribute('marker-end', `url(#${markerId})`);
     } else {
-      const d = `M ${acx} ${ay} L ${acx} ${ymid} L ${bcx} ${ymid} L ${bcx} ${by}`;
+      const d = points.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', style.width * widthMul);
       if(style.dash !== 'none') path.setAttribute('stroke-dasharray', style.dash);
