@@ -666,6 +666,7 @@
       <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dashed;"></span> Footnote — dashed</div>
       <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dotted;border-top-width:4px;"></span> Summary — dotted</div>
       <div class="legend-item">✦✦✦ Combined into</div>
+      <div class="legend-item">◆◆◆ Takreej — hadith verification</div>
       <div class="legend-item"><span style="width:14px;height:14px;border-radius:50%;background:#a31d1d;display:inline-block;"></span> Manuscript (مخطوط)</div>
       <div class="legend-item" style="font-style:italic;">Line color = the book it comes from</div>
     </div>
@@ -695,6 +696,7 @@
     <button onclick="makeEdge('commentary')">Commentary — bold line</button>
     <button onclick="makeEdge('footnote')">Footnote — dashed line</button>
     <button onclick="makeEdge('summary')">Summary — dotted line</button>
+    <button onclick="makeEdge('takreej')">Takreej — diamond line</button>
     <button onclick="hideMenu()">Cancel</button>
   </div>
 
@@ -1175,6 +1177,26 @@ function ensureExtraContent(){
   addEdge({ id: uid(), from:'jamikab', to:'wajizjamikab', type:'commentary' });
   addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat1', type:'commentary' });
   addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat2', type:'commentary' });
+
+  // Hidayah commentary/footnote/takreej works, and a handful of other previously-unconnected
+  // books wired to their base texts.
+  addEdge({ id: uid(), from:'hidayah', to:'hashiyahidaya', type:'footnote' });
+  addEdge({ id: uid(), from:'hidayah', to:'kifayahidaya', type:'commentary' });
+  addEdge({ id: uid(), from:'hidayah', to:'nasbraya', type:'takreej' });
+  addEdge({ id: uid(), from:'hidayah', to:'dirayah', type:'takreej' });
+  addEdge({ id: uid(), from:'tuhfatmuluk', to:'minhatsuluk', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'sharhmullamiskin', type:'commentary' });
+  addEdge({ id: uid(), from:'multaqaabhur', to:'durrmuntaqa', type:'commentary' });
+  addEdge({ id: uid(), from:'multaqaabhur', to:'majmaanhur', type:'commentary' });
+  addEdge({ id: uid(), from:'bahrraiq', to:'mazharhaqaiq', type:'footnote' });
+  addEdge({ id: uid(), from:'maraqifalah', to:'tahtawimaraqi', type:'footnote' });
+  addEdge({ id: uid(), from:'nuridah', to:'maraqifalah', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'kashfhaqaiq', type:'commentary' });
+
+  { // Multaqa al-Abhur (the book, not the merge marker) never had its author recorded.
+    const multaqaabhur = state.nodes.find(n => n.id === 'multaqaabhur');
+    if(multaqaabhur && !multaqaabhur.author) multaqaabhur.author = 'إبراهيم الحلبي (d. 956H)';
+  }
 
 
   if(!state._qudooriNextToMabsut){
@@ -1976,6 +1998,32 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  // New commentary/footnote/takreej connections added above wire several previously-isolated
+  // books into the graph. Boards that already ran the color/layout migrations (above) won't
+  // repeat them just because new edges showed up, so those specific books would otherwise be
+  // stuck black and parked in the isolated grid despite now having real connections. Give any
+  // book that's connected but still carrying the black placeholder color a fresh one, then
+  // relayout so it moves into the main graph instead of sitting off to the right.
+  if(!state._newConnectionsV1){
+    if(state._boardXPaddingV1){
+      state.nodes.forEach(n => { n.x -= BOARD_X_OFFSET; });
+      state._boardXPaddingV1 = false;
+    }
+
+    const connectedNow = computeConnectedIds();
+    state.nodes.forEach(n => {
+      if(n.type !== 'combine' && connectedNow.has(n.id) && n.color === UNCONNECTED_COLOR){
+        n.color = nextColor();
+      }
+    });
+
+    computeLayoutV1();
+    layoutIsolatedBooks();
+
+    state._newConnectionsV1 = true;
+    changed = true;
+  }
+
   // Shifts every node right by BOARD_X_OFFSET so the board isn't flush against the left
   // edge of the canvas -- there's now empty, scrollable space on both sides of the content.
   // Runs once, after every other layout migration above has finished placing nodes, so it
@@ -2094,6 +2142,30 @@ function computeLayoutV1(){
     const maxY = Math.max(...sources.map(n => n.y));
     plus.x = avgX - 6;
     plus.y = result ? (maxY + result.y) / 2 - 8 : maxY + 90;
+  });
+
+  // A "+" marker's position is just an average of its sources' x -- with enough books
+  // sharing a row, that average can land right inside an unrelated book's box. Nudge it
+  // down (toward its result) until clear; nothing else's position depends on a "+" marker's
+  // exact spot, so this can't itself create a new collision.
+  // A generous pad (not just enough to clear the literal box) so the lines converging on
+  // the "+" from several directions have room to route around whatever book it was near,
+  // rather than sitting flush against it.
+  const PLUS_SIZE = 22, PLUS_PAD = 45, BOOK_H_ESTIMATE = 65;
+  combineNodes.forEach(plus => {
+    if(plus.x === undefined) return;
+    function hitsABook(){
+      return realBooks.some(n => {
+        const w = estimateWidth(n);
+        return plus.x < n.x + w + PLUS_PAD && plus.x + PLUS_SIZE + PLUS_PAD > n.x &&
+               plus.y < n.y + BOOK_H_ESTIMATE + PLUS_PAD && plus.y + PLUS_SIZE + PLUS_PAD > n.y;
+      });
+    }
+    let tries = 0;
+    while(hitsABook() && tries < 40){
+      plus.y += 12;
+      tries++;
+    }
   });
 }
 
@@ -2623,7 +2695,8 @@ function buildAddConnectionForm(nodeId){
   [
     ['commentary', 'Commentary — bold line'],
     ['footnote', 'Footnote — dashed line'],
-    ['summary', 'Summary — dotted line']
+    ['summary', 'Summary — dotted line'],
+    ['takreej', 'Takreej — diamond line']
   ].forEach(([val, label]) => {
     const opt = document.createElement('option');
     opt.value = val;
@@ -2785,6 +2858,7 @@ const MINI_TYPE_LABELS = {
   commentary: 'Commentary — arrows',
   footnote: 'Footnote — dashed',
   summary: 'Summary — dotted',
+  takreej: 'Takreej — diamonds',
   merge: 'Combined into'
 };
 const MINI_TYPE_DASH = {
@@ -2896,6 +2970,18 @@ function buildMiniDiagramPopup(centerId, neighborIds){
       marker.appendChild(plus);
     });
   }
+  function ensureDiamondMarker(color){
+    // Takreej reads as a line of small diamonds, matching the main board's symbol for it.
+    return ensureMarker('diamond', color, (marker) => {
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('orient', '0');
+      const diamond = document.createElementNS(svgNS, 'path');
+      diamond.setAttribute('d', 'M 5,1.5 L 8.5,5 L 5,8.5 L 1.5,5 Z');
+      diamond.setAttribute('fill', color);
+      marker.appendChild(diamond);
+    });
+  }
 
   const edgesLayer = document.createElementNS(svgNS, 'g');
   const nodesLayer = document.createElementNS(svgNS, 'g');
@@ -2932,6 +3018,23 @@ function buildMiniDiagramPopup(centerId, neighborIds){
       path.setAttribute('marker-start', plusMarker);
       path.setAttribute('marker-mid', plusMarker);
       path.setAttribute('marker-end', plusMarker);
+      edgesLayer.appendChild(path);
+    } else if(rel.type === 'takreej'){
+      const segLen = Math.hypot(ex - sx, ey - sy);
+      const steps = Math.max(2, Math.min(7, Math.round(segLen / 20)));
+      const pts = [];
+      for(let i = 0; i <= steps; i++){
+        const t = i / steps;
+        pts.push([sx + (ex - sx) * t, sy + (ey - sy) * t]);
+      }
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', pts.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' '));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'none');
+      const diamondMarker = `url(#${ensureDiamondMarker(color)})`;
+      path.setAttribute('marker-start', diamondMarker);
+      path.setAttribute('marker-mid', diamondMarker);
+      path.setAttribute('marker-end', diamondMarker);
       edgesLayer.appendChild(path);
     } else {
       const line = document.createElementNS(svgNS, 'line');
@@ -3002,6 +3105,11 @@ function buildMiniDiagramPopup(centerId, neighborIds){
       const symbol = document.createElement('span');
       symbol.className = 'mini-diagram-legend-plus';
       symbol.textContent = '+ + +';
+      item.appendChild(symbol);
+    } else if(type === 'takreej'){
+      const symbol = document.createElement('span');
+      symbol.className = 'mini-diagram-legend-plus';
+      symbol.textContent = '◆ ◆ ◆';
       item.appendChild(symbol);
     } else {
       const swatch = document.createElement('span');
@@ -3225,6 +3333,7 @@ function edgeStyle(type){
   if(type === 'footnote') return { width: 1.6, dash: '6,5' };
   if(type === 'summary') return { width: 4, dash: '0.1,10' };
   if(type === 'merge') return { width: 3.5, dash: '0.1,7' };
+  if(type === 'takreej') return { width: 1.2, dash: '0.1,8' };
   return { width: 1.5, dash: 'none' };
 }
 
@@ -3691,6 +3800,31 @@ function render(){
       starShape.setAttribute('d', 'M 5,0.5 L 6.06,3.54 L 9.28,3.61 L 6.71,5.56 L 7.65,8.64 L 5,6.8 L 2.36,8.64 L 3.29,5.56 L 0.72,3.61 L 3.94,3.54 Z');
       starShape.setAttribute('fill', color);
       marker.appendChild(starShape);
+      defs.appendChild(marker);
+
+      path.setAttribute('marker-mid', `url(#${markerId})`);
+      path.setAttribute('marker-end', `url(#${markerId})`);
+    } else if(e.type === 'takreej'){
+      // Takreej (تخريج, hadith-verification works) gets its own repeating symbol -- a
+      // diamond, distinct from commentary's arrows and merge's stars -- per the legend.
+      const pts = subdivideElbow(points, 10);
+      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke-width', 1.2 * widthMul);
+
+      const markerId = 'diamond-' + e.id;
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', markerId);
+      marker.setAttribute('viewBox', '0 0 10 10');
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('markerWidth', '5.5');
+      marker.setAttribute('markerHeight', '5.5');
+      marker.setAttribute('orient', '0');
+      const diamondShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      diamondShape.setAttribute('d', 'M 5,1 L 9,5 L 5,9 L 1,5 Z');
+      diamondShape.setAttribute('fill', color);
+      marker.appendChild(diamondShape);
       defs.appendChild(marker);
 
       path.setAttribute('marker-mid', `url(#${markerId})`);
