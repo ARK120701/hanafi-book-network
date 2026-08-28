@@ -100,7 +100,7 @@
 
   #canvas{
     position:relative;
-    width:7450px;
+    width:9450px;
     height:7050px;
     transform-origin:0 0;
     background-image:
@@ -111,7 +111,7 @@
   svg#lines{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
   }
@@ -119,7 +119,7 @@
   #centuryBg{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
     z-index:0;
@@ -132,7 +132,7 @@
   #timeline{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
     z-index:1;
@@ -1953,6 +1953,16 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  // Shifts every node right by BOARD_X_OFFSET so the board isn't flush against the left
+  // edge of the canvas -- there's now empty, scrollable space on both sides of the content.
+  // Runs once, after every other layout migration above has finished placing nodes, so it
+  // moves each node's actual final x rather than one a later migration would overwrite.
+  if(!state._boardXPaddingV1){
+    state.nodes.forEach(n => { n.x += BOARD_X_OFFSET; });
+    state._boardXPaddingV1 = true;
+    changed = true;
+  }
+
   if(changed) saveState();
 }
 
@@ -2088,6 +2098,12 @@ async function saveState(){
 
 function uid(){ return 'n' + Math.random().toString(36).slice(2,9); }
 
+// Empty horizontal padding kept on both sides of the actual board content, so the canvas
+// can be scrolled left and right past the content instead of the content starting flush
+// against the left edge. Applied once to every node's x by the _boardXPaddingV1 migration
+// below; the canvas width and trunk-routing margin are widened/shifted to match.
+const BOARD_X_OFFSET = 1000;
+
 const CENTURY_HEIGHT = 450;
 const CENTURY_START_Y = 40;
 const NUM_CENTURIES = 16;
@@ -2160,7 +2176,7 @@ function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (7450 * zoom) + 'px';
+  sizer.style.width = (9450 * zoom) + 'px';
   sizer.style.height = (7050 * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
@@ -3288,7 +3304,7 @@ function routeEdgeLocal(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes,
 // unrelated rows lie between source and target, which is what was cutting through other
 // books' columns before. `lanes` is shared across one render pass so simultaneous long edges
 // get distinct lanes, while edges whose y-ranges don't overlap can reuse the same one.
-const TRUNK_MARGIN_MIN = 40, TRUNK_MARGIN_MAX = 260, TRUNK_LANE_SPACING = 8;
+const TRUNK_MARGIN_MIN = 40 + BOARD_X_OFFSET, TRUNK_MARGIN_MAX = 260 + BOARD_X_OFFSET, TRUNK_LANE_SPACING = 8;
 
 function routeEdgeTrunk(a, b, ay, by, acx, bcx, nodeBoxes, usedSegments, lanes){
   const PAD = 6, USED_PAD = 2;
