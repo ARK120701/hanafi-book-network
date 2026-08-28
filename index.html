@@ -1824,32 +1824,7 @@ function ensureExtraContent(){
   }
 
   if(!state._v3IsolatedBooksToRight){
-    // Park every book with no connections in its own grid on the far right of its century
-    // row. ISOLATED_ZONE_X sits past the highest x any connected book reaches, and edge
-    // paths never extend past their two endpoint x-positions, so this can never cross a line.
-    const connectedIds = new Set();
-    state.edges.forEach(e => { connectedIds.add(e.from); connectedIds.add(e.to); });
-
-    const ISOLATED_ZONE_X = 5700;
-    const ISOLATED_COLS = 4;
-    const ISOLATED_COL_WIDTH = 440;
-    const ISOLATED_ROW_HEIGHT = 100;
-
-    const countByRow = {};
-    state.nodes
-      .filter(n => n.type !== 'combine' && !connectedIds.has(n.id))
-      .forEach(n => {
-        const row = Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
-        const idx = countByRow[row] || 0;
-        countByRow[row] = idx + 1;
-
-        const col = idx % ISOLATED_COLS;
-        const subRow = Math.floor(idx / ISOLATED_COLS);
-
-        n.x = ISOLATED_ZONE_X + col * ISOLATED_COL_WIDTH;
-        n.y = CENTURY_START_Y + row * CENTURY_HEIGHT + 20 + subRow * ISOLATED_ROW_HEIGHT;
-      });
-
+    layoutIsolatedBooks();
     state._v3IsolatedBooksToRight = true;
     changed = true;
   }
@@ -1950,6 +1925,54 @@ function ensureExtraContent(){
       }
     });
     state._blackenUnconnectedV1 = true;
+    changed = true;
+  }
+
+  // Every book's row should match the century its author died in -- that's the whole
+  // premise of the timeline. A handful had drifted from that (hand-placed before this was
+  // enforced programmatically); this parses each book's "(d. NNNNH)" death year out of its
+  // author field and moves any book whose row doesn't match into the right one, keeping its
+  // existing offset within the row. Books with no author or an unparseable one (a handful of
+  // modern/committee works) are left where they are -- there's no date to place them by.
+  if(!state._authorCenturyLayoutV1){
+    // computeLayoutV1/layoutIsolatedBooks below place things in the original, unshifted
+    // coordinate space (same as every earlier layout migration) -- temporarily undo the
+    // board padding shift so they see that same space, then let the padding migration right
+    // after this one reapply it to the result.
+    if(state._boardXPaddingV1){
+      state.nodes.forEach(n => { n.x -= BOARD_X_OFFSET; });
+      state._boardXPaddingV1 = false;
+    }
+
+    const DEATH_YEAR_RE = /\(d\.\s*(\d+)\s*H\)/;
+    const connectedForCentury = computeConnectedIds();
+    let rowsChanged = false;
+    state.nodes.forEach(n => {
+      if(n.type === 'combine' || !n.author) return;
+      const m = n.author.match(DEATH_YEAR_RE);
+      if(!m) return;
+      const century = Math.ceil(parseInt(m[1], 10) / 100);
+      const targetRow = century - 1;
+      // Which row a book currently reads as depends on how it got laid out: computeLayoutV1
+      // rounds to group connected books into rows, layoutIsolatedBooks floors when placing
+      // isolated ones. Detect it the same way that book was placed, or the offset computed
+      // below comes out wrong for a book sitting far enough into a tall row.
+      const currentRow = connectedForCentury.has(n.id)
+        ? Math.round((n.y - CENTURY_START_Y) / CENTURY_HEIGHT)
+        : Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
+      if(currentRow !== targetRow){
+        const offsetWithinRow = n.y - (CENTURY_START_Y + currentRow * CENTURY_HEIGHT);
+        n.y = CENTURY_START_Y + targetRow * CENTURY_HEIGHT + offsetWithinRow;
+        rowsChanged = true;
+      }
+    });
+
+    if(rowsChanged){
+      computeLayoutV1();
+      layoutIsolatedBooks();
+    }
+
+    state._authorCenturyLayoutV1 = true;
     changed = true;
   }
 
@@ -2074,6 +2097,35 @@ function computeLayoutV1(){
   });
 }
 
+// Parks every book with no commentary/footnote/summary/combine connection at all into its
+// own small grid on the far right of its century row. ISOLATED_ZONE_X sits past the highest
+// x any connected book reaches, and edge paths never extend past their two endpoint
+// x-positions, so this can never cross a line. Re-running it (e.g. after a book's row
+// changes) re-grids every isolated book fresh rather than just the ones that moved, so a row
+// that lost or gained a book doesn't end up with a gap or a collision.
+function layoutIsolatedBooks(){
+  const connectedIds = computeConnectedIds();
+  const ISOLATED_ZONE_X = 5700;
+  const ISOLATED_COLS = 4;
+  const ISOLATED_COL_WIDTH = 440;
+  const ISOLATED_ROW_HEIGHT = 100;
+
+  const countByRow = {};
+  state.nodes
+    .filter(n => n.type !== 'combine' && !connectedIds.has(n.id))
+    .forEach(n => {
+      const row = Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
+      const idx = countByRow[row] || 0;
+      countByRow[row] = idx + 1;
+
+      const col = idx % ISOLATED_COLS;
+      const subRow = Math.floor(idx / ISOLATED_COLS);
+
+      n.x = ISOLATED_ZONE_X + col * ISOLATED_COL_WIDTH;
+      n.y = CENTURY_START_Y + row * CENTURY_HEIGHT + 20 + subRow * ISOLATED_ROW_HEIGHT;
+    });
+}
+
 function seedDefaultState(){
   const books = [
     { id: 'mabsut',   name: 'المبسوط\nAl-Mabsūṭ',              x: 120,  y: 100 },
@@ -2132,12 +2184,11 @@ function buildTimeline(){
     line.style.top = y + 'px';
     el.appendChild(line);
 
-    // Hidden for now -- uncomment to bring back the century label boxes on the left.
-    // const label = document.createElement('div');
-    // label.className = 'century-label';
-    // label.style.top = (y + 8) + 'px';
-    // label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
-    // el.appendChild(label);
+    const label = document.createElement('div');
+    label.className = 'century-label';
+    label.style.top = (y + 8) + 'px';
+    label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
+    el.appendChild(label);
   }
   // closing line at the bottom of the last century
   const closingLine = document.createElement('div');
