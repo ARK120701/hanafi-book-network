@@ -317,6 +317,34 @@
     max-height:calc(100vh - 140px);
     overflow-y:auto;
   }
+  .lang-toggle{
+    display:flex;
+    flex-shrink:0;
+    align-self:flex-end;
+    border:1.5px solid var(--maroon);
+    border-radius:14px;
+    overflow:hidden;
+    background:#fffaf0;
+    box-shadow:0 4px 12px rgba(43,35,32,0.2);
+  }
+  .lang-toggle button{
+    border:none;
+    border-radius:0;
+    background:transparent;
+    color:var(--maroon);
+    font-size:11.5px;
+    font-weight:700;
+    padding:5px 14px;
+  }
+  .lang-toggle button.active{
+    background:var(--maroon);
+    color:#fff8ee;
+  }
+  .popup textarea[dir="rtl"], .notes-readonly[dir="rtl"]{
+    font-family:'Amiri', serif;
+    font-size:14.5px;
+    text-align:right;
+  }
   .popup{
     background:#fffaf0;
     border:1.5px solid var(--line);
@@ -657,6 +685,14 @@ let combineSet = new Set();
 let connectMode = false;
 let viewedNode = null;
 let connAddState = { targetId: '', type: 'commentary', reversed: false };
+const NOTES_LANG_KEY = 'hanafi-book-network:notesLang';
+let notesLang = localStorage.getItem(NOTES_LANG_KEY) === 'ar' ? 'ar' : 'en';
+
+function setNotesLang(lang){
+  notesLang = lang;
+  localStorage.setItem(NOTES_LANG_KEY, lang);
+  render();
+}
 let zoom = 1;
 const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
 const STORAGE_KEY = 'hanafi-book-network';
@@ -786,6 +822,8 @@ async function loadPublishedNotes(){
       if(!n) return;
       if(typeof data[id].bookNotes === 'string'){ n.bookNotes = data[id].bookNotes; changed = true; }
       if(typeof data[id].authorNotes === 'string'){ n.authorNotes = data[id].authorNotes; changed = true; }
+      if(typeof data[id].bookNotesAr === 'string'){ n.bookNotesAr = data[id].bookNotesAr; changed = true; }
+      if(typeof data[id].authorNotesAr === 'string'){ n.authorNotesAr = data[id].authorNotesAr; changed = true; }
     });
     if(changed) render();
   }catch(e){ /* offline, or notes.json not reachable (e.g. running from a plain file://) — ignore */ }
@@ -2491,11 +2529,12 @@ function buildPopup(opts){
     const textarea = document.createElement('textarea');
     textarea.value = opts.notesValue;
     textarea.placeholder = opts.placeholder;
+    textarea.dir = opts.rtl ? 'rtl' : 'ltr';
     box.appendChild(textarea);
 
     const saveBtn = document.createElement('button');
     saveBtn.className = 'popup-save';
-    saveBtn.textContent = 'Save notes';
+    saveBtn.textContent = opts.rtl ? 'حفظ الملاحظات' : 'Save notes';
     saveBtn.onclick = () => { opts.onSave(textarea.value); };
     box.appendChild(saveBtn);
 
@@ -2508,7 +2547,8 @@ function buildPopup(opts){
   } else {
     const p = document.createElement('div');
     p.className = 'notes-readonly';
-    p.textContent = opts.notesValue ? opts.notesValue : 'No notes yet.';
+    p.dir = opts.rtl ? 'rtl' : 'ltr';
+    p.textContent = opts.notesValue ? opts.notesValue : (opts.rtl ? 'لا توجد ملاحظات بعد.' : 'No notes yet.');
     box.appendChild(p);
   }
 
@@ -2563,6 +2603,20 @@ function buildPopup(opts){
   return box;
 }
 
+function buildLangToggle(){
+  const wrap = document.createElement('div');
+  wrap.className = 'lang-toggle';
+  [['en', 'EN'], ['ar', 'AR']].forEach(([code, label]) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = label;
+    btn.className = notesLang === code ? 'active' : '';
+    btn.onclick = () => setNotesLang(code);
+    wrap.appendChild(btn);
+  });
+  return wrap;
+}
+
 function renderPopups(){
   const container = document.getElementById('notesPopups');
   container.innerHTML = '';
@@ -2571,26 +2625,34 @@ function renderPopups(){
   if(!node){ viewedNode = null; container.style.display = 'none'; return; }
   container.style.display = 'flex';
 
+  const rtl = notesLang === 'ar';
+  const bookField = rtl ? 'bookNotesAr' : 'bookNotes';
+  const authorField = rtl ? 'authorNotesAr' : 'authorNotes';
+
+  container.appendChild(buildLangToggle());
+
   const lines = node.name.split('\n');
   container.appendChild(buildPopup({
     title: lines[0],
     subtitle: lines[1] || '',
-    notesValue: node.bookNotes || '',
-    placeholder: 'Notes about this book...',
-    statusKey: node.id + ':bookNotes',
-    onSave: (val) => saveAndPublishNote(node.id, 'bookNotes', val),
+    notesValue: node[bookField] || '',
+    placeholder: rtl ? 'ملاحظات حول هذا الكتاب...' : 'Notes about this book...',
+    statusKey: node.id + ':' + bookField,
+    onSave: (val) => saveAndPublishNote(node.id, bookField, val),
     connections: isAdmin ? getConnectionsFor(node.id) : null,
-    deleteNodeId: node.id
+    deleteNodeId: node.id,
+    rtl
   }));
 
   container.appendChild(buildPopup({
     title: node.author || 'Author',
     subtitle: '',
-    notesValue: node.authorNotes || '',
-    placeholder: 'Notes about the author...',
-    statusKey: node.id + ':authorNotes',
-    onSave: (val) => saveAndPublishNote(node.id, 'authorNotes', val),
-    connections: null
+    notesValue: node[authorField] || '',
+    placeholder: rtl ? 'ملاحظات حول المؤلف...' : 'Notes about the author...',
+    statusKey: node.id + ':' + authorField,
+    onSave: (val) => saveAndPublishNote(node.id, authorField, val),
+    connections: null,
+    rtl
   }));
 }
 
