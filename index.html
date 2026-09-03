@@ -100,7 +100,7 @@
 
   #canvas{
     position:relative;
-    width:7450px;
+    width:9450px;
     height:7050px;
     transform-origin:0 0;
     background-image:
@@ -111,7 +111,7 @@
   svg#lines{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
   }
@@ -119,7 +119,7 @@
   #centuryBg{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
     z-index:0;
@@ -132,7 +132,7 @@
   #timeline{
     position:absolute;
     top:0; left:0;
-    width:7450px;
+    width:9450px;
     height:7050px;
     pointer-events:none;
     z-index:1;
@@ -183,6 +183,8 @@
     user-select:none;
     white-space:nowrap;
     z-index:5;
+    opacity:1;
+    transition:opacity 0.15s ease;
   }
   body.admin .node{ cursor:grab; }
   .node.selected{
@@ -196,9 +198,12 @@
     border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(166,118,63,0.3);
   }
-  .node.combine-source{
+  .node.connected{
     border-color:var(--gold);
     box-shadow:0 0 0 3px rgba(166,118,63,0.45);
+  }
+  .node.dimmed{
+    opacity:0.28;
   }
   .node.combine{
     width:22px;
@@ -493,6 +498,78 @@
     padding:5px 10px;
   }
 
+  .mini-diagram{
+    /* Flex items default to min-width:auto, which lets a wide SVG child force this
+       card past the popup column's width instead of scrolling. Force it to shrink. */
+    min-width:0;
+  }
+  .mini-diagram-scroll{
+    margin-top:6px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    min-width:0;
+  }
+  .mini-diagram svg{
+    display:block;
+  }
+  .mini-diagram .mini-node{ cursor:pointer; }
+  .mini-diagram .mini-node rect{
+    fill:linear-gradient(180deg,#fffaf0,var(--parchment-deep));
+    fill:var(--parchment-deep);
+    stroke:var(--line);
+    stroke-width:1.2;
+    transition:filter 0.15s ease;
+  }
+  .mini-diagram .mini-node:hover rect{ filter:brightness(0.93); }
+  .mini-diagram .mini-center rect{
+    fill:var(--maroon);
+    stroke:var(--maroon);
+  }
+  .mini-diagram .mini-center text{ fill:#fff8ee; }
+  .mini-diagram .mini-label{
+    font-family:'Cairo', sans-serif;
+    font-size:9.5px;
+    fill:var(--ink);
+    pointer-events:none;
+  }
+  .mini-diagram-empty{
+    font-size:12px;
+    font-style:italic;
+    color:#6b5d4f;
+    margin-top:4px;
+  }
+  .mini-diagram-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:8px 14px;
+    margin-top:6px;
+    font-size:11px;
+    color:#6b5d4f;
+  }
+  .mini-diagram-legend-item{
+    display:flex;
+    align-items:center;
+    gap:5px;
+  }
+  .mini-diagram-legend-swatch{
+    width:16px;
+    height:0;
+    border-top-width:2.5px;
+    border-top-style:solid;
+    display:inline-block;
+  }
+  .mini-diagram-legend-plus{
+    font-weight:700;
+    font-size:11px;
+    letter-spacing:0.5px;
+  }
+  .mini-diagram-legend-note{
+    margin-top:4px;
+    font-size:11px;
+    font-style:italic;
+    color:#6b5d4f;
+  }
+
   .export-overlay{
     position:fixed;
     inset:0;
@@ -617,6 +694,7 @@
       <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dashed;"></span> Footnote — dashed</div>
       <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dotted;border-top-width:4px;"></span> Summary — dotted</div>
       <div class="legend-item">✦✦✦ Combined into</div>
+      <div class="legend-item">◆◆◆ Takreej — hadith verification</div>
       <div class="legend-item"><span style="width:14px;height:14px;border-radius:50%;background:#a31d1d;display:inline-block;"></span> Manuscript (مخطوط)</div>
       <div class="legend-item" style="font-style:italic;">Line color = the book it comes from</div>
     </div>
@@ -646,6 +724,7 @@
     <button onclick="makeEdge('commentary')">Commentary — bold line</button>
     <button onclick="makeEdge('footnote')">Footnote — dashed line</button>
     <button onclick="makeEdge('summary')">Summary — dotted line</button>
+    <button onclick="makeEdge('takreej')">Takreej — diamond line</button>
     <button onclick="hideMenu()">Cancel</button>
   </div>
 
@@ -1136,6 +1215,26 @@ function ensureExtraContent(){
   addEdge({ id: uid(), from:'jamikab', to:'wajizjamikab', type:'commentary' });
   addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat1', type:'commentary' });
   addEdge({ id: uid(), from:'ziyadat', to:'sharhziyadat2', type:'commentary' });
+
+  // Hidayah commentary/footnote/takreej works, and a handful of other previously-unconnected
+  // books wired to their base texts.
+  addEdge({ id: uid(), from:'hidayah', to:'hashiyahidaya', type:'footnote' });
+  addEdge({ id: uid(), from:'hidayah', to:'kifayahidaya', type:'commentary' });
+  addEdge({ id: uid(), from:'hidayah', to:'nasbraya', type:'takreej' });
+  addEdge({ id: uid(), from:'hidayah', to:'dirayah', type:'takreej' });
+  addEdge({ id: uid(), from:'tuhfatmuluk', to:'minhatsuluk', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'sharhmullamiskin', type:'commentary' });
+  addEdge({ id: uid(), from:'multaqaabhur', to:'durrmuntaqa', type:'commentary' });
+  addEdge({ id: uid(), from:'multaqaabhur', to:'majmaanhur', type:'commentary' });
+  addEdge({ id: uid(), from:'bahrraiq', to:'mazharhaqaiq', type:'footnote' });
+  addEdge({ id: uid(), from:'maraqifalah', to:'tahtawimaraqi', type:'footnote' });
+  addEdge({ id: uid(), from:'nuridah', to:'maraqifalah', type:'commentary' });
+  addEdge({ id: uid(), from:'kanz', to:'kashfhaqaiq', type:'commentary' });
+
+  { // Multaqa al-Abhur (the book, not the merge marker) never had its author recorded.
+    const multaqaabhur = state.nodes.find(n => n.id === 'multaqaabhur');
+    if(multaqaabhur && !multaqaabhur.author) multaqaabhur.author = 'إبراهيم الحلبي (d. 956H)';
+  }
 
 
   if(!state._qudooriNextToMabsut){
@@ -1785,32 +1884,7 @@ function ensureExtraContent(){
   }
 
   if(!state._v3IsolatedBooksToRight){
-    // Park every book with no connections in its own grid on the far right of its century
-    // row. ISOLATED_ZONE_X sits past the highest x any connected book reaches, and edge
-    // paths never extend past their two endpoint x-positions, so this can never cross a line.
-    const connectedIds = new Set();
-    state.edges.forEach(e => { connectedIds.add(e.from); connectedIds.add(e.to); });
-
-    const ISOLATED_ZONE_X = 5700;
-    const ISOLATED_COLS = 4;
-    const ISOLATED_COL_WIDTH = 440;
-    const ISOLATED_ROW_HEIGHT = 100;
-
-    const countByRow = {};
-    state.nodes
-      .filter(n => n.type !== 'combine' && !connectedIds.has(n.id))
-      .forEach(n => {
-        const row = Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
-        const idx = countByRow[row] || 0;
-        countByRow[row] = idx + 1;
-
-        const col = idx % ISOLATED_COLS;
-        const subRow = Math.floor(idx / ISOLATED_COLS);
-
-        n.x = ISOLATED_ZONE_X + col * ISOLATED_COL_WIDTH;
-        n.y = CENTURY_START_Y + row * CENTURY_HEIGHT + 20 + subRow * ISOLATED_ROW_HEIGHT;
-      });
-
+    layoutIsolatedBooks();
     state._v3IsolatedBooksToRight = true;
     changed = true;
   }
@@ -1882,12 +1956,121 @@ function ensureExtraContent(){
     changed = true;
   }
 
+  // The old palette only had 12 colors cycling across 165 books, so most books (and their
+  // lines, which take the color of the book they come from) shared a color with a dozen
+  // others. Re-roll every book's color once against the wider, evenly-spread palette below.
+  if(!state._colorPaletteV2){
+    state._colorIndex = 0;
+    state.nodes.forEach(n => { if(n.type !== 'combine') delete n.color; });
+    state._colorPaletteV2 = true;
+    changed = true;
+  }
+
   state.nodes.forEach(n => {
     if(n.type !== 'combine' && !n.color){
       n.color = nextColor();
       changed = true;
     }
   });
+
+  // Books with no commentary/footnote/summary/combine connection at all -- the ones parked
+  // in their own grid on the right by computeLayoutV1 -- get no lines, so a distinct color
+  // on them doesn't communicate anything. Leave them plain black for now.
+  if(!state._blackenUnconnectedV1){
+    const connectedIds = computeConnectedIds();
+    state.nodes.forEach(n => {
+      if(n.type !== 'combine' && !connectedIds.has(n.id)){
+        n.color = UNCONNECTED_COLOR;
+        changed = true;
+      }
+    });
+    state._blackenUnconnectedV1 = true;
+    changed = true;
+  }
+
+  // Every book's row should match the century its author died in -- that's the whole
+  // premise of the timeline. A handful had drifted from that (hand-placed before this was
+  // enforced programmatically); this parses each book's "(d. NNNNH)" death year out of its
+  // author field and moves any book whose row doesn't match into the right one, keeping its
+  // existing offset within the row. Books with no author or an unparseable one (a handful of
+  // modern/committee works) are left where they are -- there's no date to place them by.
+  if(!state._authorCenturyLayoutV1){
+    // computeLayoutV1/layoutIsolatedBooks below place things in the original, unshifted
+    // coordinate space (same as every earlier layout migration) -- temporarily undo the
+    // board padding shift so they see that same space, then let the padding migration right
+    // after this one reapply it to the result.
+    if(state._boardXPaddingV1){
+      state.nodes.forEach(n => { n.x -= BOARD_X_OFFSET; });
+      state._boardXPaddingV1 = false;
+    }
+
+    const DEATH_YEAR_RE = /\(d\.\s*(\d+)\s*H\)/;
+    const connectedForCentury = computeConnectedIds();
+    let rowsChanged = false;
+    state.nodes.forEach(n => {
+      if(n.type === 'combine' || !n.author) return;
+      const m = n.author.match(DEATH_YEAR_RE);
+      if(!m) return;
+      const century = Math.ceil(parseInt(m[1], 10) / 100);
+      const targetRow = century - 1;
+      // Which row a book currently reads as depends on how it got laid out: computeLayoutV1
+      // rounds to group connected books into rows, layoutIsolatedBooks floors when placing
+      // isolated ones. Detect it the same way that book was placed, or the offset computed
+      // below comes out wrong for a book sitting far enough into a tall row.
+      const currentRow = connectedForCentury.has(n.id)
+        ? Math.round((n.y - CENTURY_START_Y) / CENTURY_HEIGHT)
+        : Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
+      if(currentRow !== targetRow){
+        const offsetWithinRow = n.y - (CENTURY_START_Y + currentRow * CENTURY_HEIGHT);
+        n.y = CENTURY_START_Y + targetRow * CENTURY_HEIGHT + offsetWithinRow;
+        rowsChanged = true;
+      }
+    });
+
+    if(rowsChanged){
+      computeLayoutV1();
+      layoutIsolatedBooks();
+    }
+
+    state._authorCenturyLayoutV1 = true;
+    changed = true;
+  }
+
+  // New commentary/footnote/takreej connections added above wire several previously-isolated
+  // books into the graph. Boards that already ran the color/layout migrations (above) won't
+  // repeat them just because new edges showed up, so those specific books would otherwise be
+  // stuck black and parked in the isolated grid despite now having real connections. Give any
+  // book that's connected but still carrying the black placeholder color a fresh one, then
+  // relayout so it moves into the main graph instead of sitting off to the right.
+  if(!state._newConnectionsV1){
+    if(state._boardXPaddingV1){
+      state.nodes.forEach(n => { n.x -= BOARD_X_OFFSET; });
+      state._boardXPaddingV1 = false;
+    }
+
+    const connectedNow = computeConnectedIds();
+    state.nodes.forEach(n => {
+      if(n.type !== 'combine' && connectedNow.has(n.id) && n.color === UNCONNECTED_COLOR){
+        n.color = nextColor();
+      }
+    });
+
+    computeLayoutV1();
+    layoutIsolatedBooks();
+
+    state._newConnectionsV1 = true;
+    changed = true;
+  }
+
+  // Shifts every node right by BOARD_X_OFFSET so the board isn't flush against the left
+  // edge of the canvas -- there's now empty, scrollable space on both sides of the content.
+  // Runs once, after every other layout migration above has finished placing nodes, so it
+  // moves each node's actual final x rather than one a later migration would overwrite.
+  if(!state._boardXPaddingV1){
+    state.nodes.forEach(n => { n.x += BOARD_X_OFFSET; });
+    state._boardXPaddingV1 = true;
+    changed = true;
+  }
 
   if(changed) saveState();
 }
@@ -1897,6 +2080,26 @@ function ensureExtraContent(){
 // lines route around book boxes instead of through them. Century row placement itself is
 // left untouched — it comes from each node's existing y, established by the hand-placed
 // positions and fixups above.
+// A book counts as "connected" if it has a commentary/footnote/summary edge, or is a
+// source/result of a combine. Everything else is an island with no line ever touching it
+// (parked in its own grid on the right by computeLayoutV1) -- shared with the color
+// assignment below, which keeps those islands neutral instead of giving them a color that
+// implies a connection they don't have.
+function computeConnectedIds(){
+  const connectedIds = new Set();
+  state.edges.forEach(e => {
+    if(e.type === 'merge') return;
+    connectedIds.add(e.from);
+    connectedIds.add(e.to);
+  });
+  state.nodes.filter(n => n.type === 'combine').forEach(plus => {
+    state.edges.filter(e => e.type === 'merge' && e.to === plus.id).forEach(e => connectedIds.add(e.from));
+    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    if(resultEdge) connectedIds.add(resultEdge.to);
+  });
+  return connectedIds;
+}
+
 function computeLayoutV1(){
   const LEFT_MARGIN = 280;
   const COL_GAP = 50;
@@ -1912,19 +2115,7 @@ function computeLayoutV1(){
 
   const realBooks = state.nodes.filter(n => n.type !== 'combine');
   const combineNodes = state.nodes.filter(n => n.type === 'combine');
-
-  // A book counts as "connected" if it has a non-merge edge, or is a source/result of a combine.
-  const connectedIds = new Set();
-  state.edges.forEach(e => {
-    if(e.type === 'merge') return;
-    connectedIds.add(e.from);
-    connectedIds.add(e.to);
-  });
-  combineNodes.forEach(plus => {
-    state.edges.filter(e => e.type === 'merge' && e.to === plus.id).forEach(e => connectedIds.add(e.from));
-    const resultEdge = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
-    if(resultEdge) connectedIds.add(resultEdge.to);
-  });
+  const connectedIds = computeConnectedIds();
 
   // Logical adjacency for ordering: direct edges between real books, plus source<->result
   // pairs bridged through each combine "+" marker (so merged books pull toward each other).
@@ -1990,6 +2181,59 @@ function computeLayoutV1(){
     plus.x = avgX - 6;
     plus.y = result ? (maxY + result.y) / 2 - 8 : maxY + 90;
   });
+
+  // A "+" marker's position is just an average of its sources' x -- with enough books
+  // sharing a row, that average can land right inside an unrelated book's box. Nudge it
+  // down (toward its result) until clear; nothing else's position depends on a "+" marker's
+  // exact spot, so this can't itself create a new collision.
+  // A generous pad (not just enough to clear the literal box) so the lines converging on
+  // the "+" from several directions have room to route around whatever book it was near,
+  // rather than sitting flush against it.
+  const PLUS_SIZE = 22, PLUS_PAD = 45, BOOK_H_ESTIMATE = 65;
+  combineNodes.forEach(plus => {
+    if(plus.x === undefined) return;
+    function hitsABook(){
+      return realBooks.some(n => {
+        const w = estimateWidth(n);
+        return plus.x < n.x + w + PLUS_PAD && plus.x + PLUS_SIZE + PLUS_PAD > n.x &&
+               plus.y < n.y + BOOK_H_ESTIMATE + PLUS_PAD && plus.y + PLUS_SIZE + PLUS_PAD > n.y;
+      });
+    }
+    let tries = 0;
+    while(hitsABook() && tries < 40){
+      plus.y += 12;
+      tries++;
+    }
+  });
+}
+
+// Parks every book with no commentary/footnote/summary/combine connection at all into its
+// own small grid on the far right of its century row. ISOLATED_ZONE_X sits past the highest
+// x any connected book reaches, and edge paths never extend past their two endpoint
+// x-positions, so this can never cross a line. Re-running it (e.g. after a book's row
+// changes) re-grids every isolated book fresh rather than just the ones that moved, so a row
+// that lost or gained a book doesn't end up with a gap or a collision.
+function layoutIsolatedBooks(){
+  const connectedIds = computeConnectedIds();
+  const ISOLATED_ZONE_X = 5700;
+  const ISOLATED_COLS = 4;
+  const ISOLATED_COL_WIDTH = 440;
+  const ISOLATED_ROW_HEIGHT = 100;
+
+  const countByRow = {};
+  state.nodes
+    .filter(n => n.type !== 'combine' && !connectedIds.has(n.id))
+    .forEach(n => {
+      const row = Math.floor((n.y - CENTURY_START_Y) / CENTURY_HEIGHT);
+      const idx = countByRow[row] || 0;
+      countByRow[row] = idx + 1;
+
+      const col = idx % ISOLATED_COLS;
+      const subRow = Math.floor(idx / ISOLATED_COLS);
+
+      n.x = ISOLATED_ZONE_X + col * ISOLATED_COL_WIDTH;
+      n.y = CENTURY_START_Y + row * CENTURY_HEIGHT + 20 + subRow * ISOLATED_ROW_HEIGHT;
+    });
 }
 
 function seedDefaultState(){
@@ -2015,6 +2259,12 @@ async function saveState(){
 }
 
 function uid(){ return 'n' + Math.random().toString(36).slice(2,9); }
+
+// Empty horizontal padding kept on both sides of the actual board content, so the canvas
+// can be scrolled left and right past the content instead of the content starting flush
+// against the left edge. Applied once to every node's x by the _boardXPaddingV1 migration
+// below; the canvas width and trunk-routing margin are widened/shifted to match.
+const BOARD_X_OFFSET = 1000;
 
 const CENTURY_HEIGHT = 450;
 const CENTURY_START_Y = 40;
@@ -2044,12 +2294,11 @@ function buildTimeline(){
     line.style.top = y + 'px';
     el.appendChild(line);
 
-    // Hidden for now -- uncomment to bring back the century label boxes on the left.
-    // const label = document.createElement('div');
-    // label.className = 'century-label';
-    // label.style.top = (y + 8) + 'px';
-    // label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
-    // el.appendChild(label);
+    const label = document.createElement('div');
+    label.className = 'century-label';
+    label.style.top = (y + 8) + 'px';
+    label.innerHTML = `القرن ${ARABIC_ORDINALS[i]} هـ<span class="en">${ENGLISH_ORDINALS[i]} century AH</span>`;
+    el.appendChild(label);
   }
   // closing line at the bottom of the last century
   const closingLine = document.createElement('div');
@@ -2058,24 +2307,37 @@ function buildTimeline(){
   el.appendChild(closingLine);
 }
 
-const COLOR_PALETTE = [
-  '#2f6f4f', '#1d5b8a', '#7a4fa3', '#b5651d',
-  '#5a7d1f', '#0e7c86', '#8a3a5c', '#4a4a8a',
-  '#a67c00', '#2e8b8b', '#6b3fa0', '#3f6b3f'
-];
+const UNCONNECTED_COLOR = '#000000';
 
+function hslToHex(h, s, l){
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  const toHex = x => Math.round(255 * x).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
+// Generates one color per call, each as far as possible from every color generated before
+// it: hue advances by the golden angle (~137.5°) so no run of hues ever bunches up, however
+// many books there end up being, and lightness/saturation cycle in step so two colors that
+// do land on a similar hue still read apart. Kept dark/muted enough (L <= 44%, since the
+// parchment background is very light) to stay legible as both a 2px book border and a line.
+// Returned as hex (not hsl(...)) so it stays compatible with the <input type=color> picker.
 function nextColor(){
   if(state._colorIndex === undefined) state._colorIndex = 0;
-  const c = COLOR_PALETTE[state._colorIndex % COLOR_PALETTE.length];
-  state._colorIndex++;
-  return c;
+  const i = state._colorIndex++;
+  const hue = Math.round((i * 137.50776) % 360);
+  const sat = [50, 65][i % 2];
+  const light = [30, 37, 44][i % 3];
+  return hslToHex(hue, sat, light);
 }
 
 function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (7450 * zoom) + 'px';
+  sizer.style.width = (9450 * zoom) + 'px';
   sizer.style.height = (7050 * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
@@ -2471,7 +2733,8 @@ function buildAddConnectionForm(nodeId){
   [
     ['commentary', 'Commentary — bold line'],
     ['footnote', 'Footnote — dashed line'],
-    ['summary', 'Summary — dotted line']
+    ['summary', 'Summary — dotted line'],
+    ['takreej', 'Takreej — diamond line']
   ].forEach(([val, label]) => {
     const opt = document.createElement('option');
     opt.value = val;
@@ -2617,6 +2880,314 @@ function buildLangToggle(){
   return wrap;
 }
 
+// Figures out how `neighborId` relates to `centerId` for the mini diagram: which
+// edge type to draw and which end the arrow points to. Falls back to 'merge' for
+// relationships that only exist through a "+" combine node (no single direct edge).
+function relationToCenter(centerId, neighborId){
+  const direct = state.edges.find(e =>
+    (e.from === centerId && e.to === neighborId) || (e.from === neighborId && e.to === centerId));
+  if(direct) return { type: direct.type, from: direct.from, to: direct.to };
+
+  const plusNode = state.nodes.find(n => {
+    if(n.type !== 'combine') return false;
+    const edgesOfPlus = state.edges.filter(e => e.from === n.id || e.to === n.id);
+    const touchesCenter = edgesOfPlus.some(e => e.from === centerId || e.to === centerId);
+    const touchesNeighbor = edgesOfPlus.some(e => e.from === neighborId || e.to === neighborId);
+    return touchesCenter && touchesNeighbor;
+  });
+  if(plusNode){
+    const centerIsResult = state.edges.some(e => e.from === plusNode.id && e.to === centerId);
+    return centerIsResult ? { type: 'merge', from: neighborId, to: centerId } : { type: 'merge', from: centerId, to: neighborId };
+  }
+  return { type: 'merge', from: centerId, to: neighborId };
+}
+
+function truncateLabel(str, max){
+  return str.length > max ? str.slice(0, max - 1) + '…' : str;
+}
+
+// Same key as the main board: type reads by line style, color reads as the book the line
+// comes from (state.nodes[id].color) -- not a fixed per-type palette.
+const MINI_TYPE_LABELS = {
+  commentary: 'Commentary — arrows',
+  footnote: 'Footnote — dashed',
+  summary: 'Summary — dotted',
+  takreej: 'Takreej — diamonds',
+  merge: 'Combined into'
+};
+const MINI_TYPE_DASH = {
+  commentary: 'none',
+  footnote: '5,4',
+  summary: '0.1,6'
+};
+
+function pointAlong(x1, y1, x2, y2, distFromStart){
+  const dx = x2 - x1, dy = y2 - y1;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const t = distFromStart / dist;
+  return [x1 + dx * t, y1 + dy * t];
+}
+
+// The clicked (highlighted) book sits at the top; everything connected to it is laid
+// out in a wrapped grid underneath, so it reads as "this book, and what points to/from it"
+// rather than a symmetric web.
+function buildMiniDiagramPopup(centerId, neighborIds){
+  const centerNode = state.nodes.find(n => n.id === centerId);
+  if(!centerNode) return null;
+  const neighbors = neighborIds.map(id => state.nodes.find(n => n.id === id)).filter(Boolean);
+
+  const box = document.createElement('div');
+  box.className = 'popup mini-diagram';
+
+  const h = document.createElement('h3');
+  h.textContent = 'Connections map';
+  box.appendChild(h);
+
+  if(neighbors.length === 0){
+    const empty = document.createElement('div');
+    empty.className = 'mini-diagram-empty';
+    empty.textContent = 'This book has no connections yet.';
+    box.appendChild(empty);
+    return box;
+  }
+
+  // Every neighbor sits in a single row below the center, all at the same y. A straight
+  // line from the center to any one of them only ever touches that shared y at its own
+  // endpoint, so no line can pass through another book's box -- unlike a wrapped multi-row
+  // grid, where a line to a lower row has to cross the row(s) above it. Rows wide enough to
+  // need more space than the popup just scroll horizontally instead of wrapping.
+  const svgNS = 'http://www.w3.org/2000/svg';
+  const NODE_W = 74, NODE_H = 28, CENTER_W = 96, CENTER_H = 34;
+  const ITEM_GAP = 18, SIDE_PAD = 20;
+  const TOP_Y = 30, BOTTOM_Y = 130;
+  const H = BOTTOM_Y + NODE_H / 2 + 20;
+
+  const itemSpan = NODE_W + ITEM_GAP;
+  const rowContentWidth = neighbors.length * itemSpan - ITEM_GAP;
+  const W = Math.max(300, rowContentWidth + SIDE_PAD * 2);
+
+  const svg = document.createElementNS(svgNS, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svg.setAttribute('width', W);
+  svg.setAttribute('height', H);
+
+  const rowStartX = (W - rowContentWidth) / 2 + NODE_W / 2;
+  const positions = { [centerId]: [W / 2, TOP_Y] };
+  neighbors.forEach((n, i) => {
+    positions[n.id] = [rowStartX + i * itemSpan, BOTTOM_Y];
+  });
+
+  const defs = document.createElementNS(svgNS, 'defs');
+  svg.appendChild(defs);
+
+  // Markers are per-color (not per-type, since color is now per-book), so they're built
+  // on demand and cached here to avoid a duplicate <marker> for every line that happens to
+  // share a book's color.
+  const markerIds = new Map();
+  function ensureMarker(kind, color, build){
+    const key = kind + '|' + color;
+    if(markerIds.has(key)) return markerIds.get(key);
+    const id = 'mini-' + kind + '-' + markerIds.size;
+    const marker = document.createElementNS(svgNS, 'marker');
+    marker.setAttribute('id', id);
+    marker.setAttribute('viewBox', '0 0 10 10');
+    marker.setAttribute('markerWidth', '6');
+    marker.setAttribute('markerHeight', '6');
+    build(marker, color);
+    defs.appendChild(marker);
+    markerIds.set(key, id);
+    return id;
+  }
+  function ensureArrowMarker(color){
+    return ensureMarker('arrow', color, (marker) => {
+      marker.setAttribute('refX', '8');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('orient', 'auto');
+      const arrowShape = document.createElementNS(svgNS, 'path');
+      arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+      arrowShape.setAttribute('fill', color);
+      marker.appendChild(arrowShape);
+    });
+  }
+  function ensurePlusMarker(color){
+    // "Combined into" reads as a line of small plus signs instead of an arrow,
+    // echoing the "+" combine node it always passes through.
+    return ensureMarker('plus', color, (marker) => {
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('orient', '0');
+      const plus = document.createElementNS(svgNS, 'path');
+      plus.setAttribute('d', 'M 5 1.5 L 5 8.5 M 1.5 5 L 8.5 5');
+      plus.setAttribute('stroke', color);
+      plus.setAttribute('stroke-width', '2');
+      plus.setAttribute('stroke-linecap', 'round');
+      marker.appendChild(plus);
+    });
+  }
+  function ensureDiamondMarker(color){
+    // Takreej reads as a line of small diamonds, matching the main board's symbol for it.
+    return ensureMarker('diamond', color, (marker) => {
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('orient', '0');
+      const diamond = document.createElementNS(svgNS, 'path');
+      diamond.setAttribute('d', 'M 5,1.5 L 8.5,5 L 5,8.5 L 1.5,5 Z');
+      diamond.setAttribute('fill', color);
+      marker.appendChild(diamond);
+    });
+  }
+
+  const edgesLayer = document.createElementNS(svgNS, 'g');
+  const nodesLayer = document.createElementNS(svgNS, 'g');
+  svg.appendChild(edgesLayer);
+  svg.appendChild(nodesLayer);
+
+  const usedTypes = new Set();
+  neighbors.forEach(n => {
+    const rel = relationToCenter(centerId, n.id);
+    const fromNode = state.nodes.find(x => x.id === rel.from);
+    const color = (fromNode && fromNode.color) || '#8a7355';
+    usedTypes.add(rel.type);
+    const [fx, fy] = positions[rel.from];
+    const [tx, ty] = positions[rel.to];
+    const startMargin = (rel.from === centerId ? CENTER_H : NODE_H) / 2 + 6;
+    const endMargin = (rel.to === centerId ? CENTER_H : NODE_H) / 2 + 6;
+    const totalDist = Math.max(Math.hypot(tx - fx, ty - fy), startMargin + endMargin + 1);
+    const [sx, sy] = pointAlong(fx, fy, tx, ty, startMargin);
+    const [ex, ey] = pointAlong(fx, fy, tx, ty, totalDist - endMargin);
+
+    if(rel.type === 'merge'){
+      const segLen = Math.hypot(ex - sx, ey - sy);
+      const steps = Math.max(2, Math.min(7, Math.round(segLen / 20)));
+      const pts = [];
+      for(let i = 0; i <= steps; i++){
+        const t = i / steps;
+        pts.push([sx + (ex - sx) * t, sy + (ey - sy) * t]);
+      }
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', pts.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' '));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'none');
+      const plusMarker = `url(#${ensurePlusMarker(color)})`;
+      path.setAttribute('marker-start', plusMarker);
+      path.setAttribute('marker-mid', plusMarker);
+      path.setAttribute('marker-end', plusMarker);
+      edgesLayer.appendChild(path);
+    } else if(rel.type === 'takreej'){
+      const segLen = Math.hypot(ex - sx, ey - sy);
+      const steps = Math.max(2, Math.min(7, Math.round(segLen / 20)));
+      const pts = [];
+      for(let i = 0; i <= steps; i++){
+        const t = i / steps;
+        pts.push([sx + (ex - sx) * t, sy + (ey - sy) * t]);
+      }
+      const path = document.createElementNS(svgNS, 'path');
+      path.setAttribute('d', pts.map((p, i) => (i === 0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' '));
+      path.setAttribute('fill', 'none');
+      path.setAttribute('stroke', 'none');
+      const diamondMarker = `url(#${ensureDiamondMarker(color)})`;
+      path.setAttribute('marker-start', diamondMarker);
+      path.setAttribute('marker-mid', diamondMarker);
+      path.setAttribute('marker-end', diamondMarker);
+      edgesLayer.appendChild(path);
+    } else {
+      const line = document.createElementNS(svgNS, 'line');
+      line.setAttribute('x1', sx); line.setAttribute('y1', sy);
+      line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+      line.setAttribute('stroke', color);
+      line.setAttribute('stroke-width', rel.type === 'commentary' ? 2.2 : 2);
+      line.setAttribute('stroke-linecap', 'round');
+      const dash = MINI_TYPE_DASH[rel.type];
+      if(dash && dash !== 'none') line.setAttribute('stroke-dasharray', dash);
+      if(rel.type === 'commentary') line.setAttribute('marker-end', `url(#${ensureArrowMarker(color)})`);
+      edgesLayer.appendChild(line);
+    }
+  });
+
+  function drawNode(id, n, isCenter){
+    const [x, y] = positions[id];
+    const w = isCenter ? CENTER_W : NODE_W, hgt = isCenter ? CENTER_H : NODE_H;
+
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'mini-node' + (isCenter ? ' mini-center' : ''));
+    g.setAttribute('transform', `translate(${x - w / 2}, ${y - hgt / 2})`);
+    if(!isCenter){
+      g.onclick = () => { centerOnNode(id); openNotesPopup(id); };
+      const titleEl = document.createElementNS(svgNS, 'title');
+      titleEl.textContent = n.name.split('\n')[0];
+      g.appendChild(titleEl);
+    }
+
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('width', w);
+    rect.setAttribute('height', hgt);
+    rect.setAttribute('rx', 5);
+    g.appendChild(rect);
+
+    const text = document.createElementNS(svgNS, 'text');
+    text.setAttribute('class', 'mini-label');
+    text.setAttribute('x', w / 2);
+    text.setAttribute('y', hgt / 2 + 3.5);
+    text.setAttribute('text-anchor', 'middle');
+    text.textContent = truncateLabel(n.name.split('\n')[0], isCenter ? 15 : 11);
+    g.appendChild(text);
+
+    nodesLayer.appendChild(g);
+  }
+
+  drawNode(centerId, centerNode, true);
+  neighbors.forEach(n => drawNode(n.id, n, false));
+
+  const scroller = document.createElement('div');
+  scroller.className = 'mini-diagram-scroll';
+  scroller.appendChild(svg);
+  box.appendChild(scroller);
+
+  // Same key as the toolbar legend above the board: style says the connection type
+  // (arrows / dashed / dotted / plus-signs), a plain neutral swatch color -- book color is
+  // explained separately below, since it names the book, not the type.
+  const legend = document.createElement('div');
+  legend.className = 'mini-diagram-legend';
+  Object.keys(MINI_TYPE_LABELS).filter(type => usedTypes.has(type)).forEach(type => {
+    const item = document.createElement('div');
+    item.className = 'mini-diagram-legend-item';
+    if(type === 'commentary'){
+      const symbol = document.createElement('span');
+      symbol.textContent = '➤➤➤';
+      item.appendChild(symbol);
+    } else if(type === 'merge'){
+      const symbol = document.createElement('span');
+      symbol.className = 'mini-diagram-legend-plus';
+      symbol.textContent = '+ + +';
+      item.appendChild(symbol);
+    } else if(type === 'takreej'){
+      const symbol = document.createElement('span');
+      symbol.className = 'mini-diagram-legend-plus';
+      symbol.textContent = '◆ ◆ ◆';
+      item.appendChild(symbol);
+    } else {
+      const swatch = document.createElement('span');
+      swatch.className = 'mini-diagram-legend-swatch';
+      swatch.style.borderTopColor = '#8a7355';
+      swatch.style.borderTopStyle = type === 'footnote' ? 'dashed' : 'dotted';
+      if(type === 'summary') swatch.style.borderTopWidth = '4px';
+      item.appendChild(swatch);
+    }
+    const label = document.createElement('span');
+    label.textContent = MINI_TYPE_LABELS[type];
+    item.appendChild(label);
+    legend.appendChild(item);
+  });
+  box.appendChild(legend);
+
+  const colorNote = document.createElement('div');
+  colorNote.className = 'mini-diagram-legend-note';
+  colorNote.textContent = 'Line color = the book it comes from';
+  box.appendChild(colorNote);
+
+  return box;
+}
+
 function renderPopups(){
   const container = document.getElementById('notesPopups');
   container.innerHTML = '';
@@ -2630,6 +3201,20 @@ function renderPopups(){
   const authorField = rtl ? 'authorNotesAr' : 'authorNotes';
 
   container.appendChild(buildLangToggle());
+
+  const HL = computeHighlight(viewedNode);
+  const miniDiagram = buildMiniDiagramPopup(viewedNode, Array.from(HL.nodeIds));
+  if(miniDiagram){
+    container.appendChild(miniDiagram);
+    // Center the scroll on the highlighted book -- only measurable now that the
+    // diagram is actually in the document and has a real layout box.
+    const scroller = miniDiagram.querySelector('.mini-diagram-scroll');
+    const svgEl = scroller && scroller.querySelector('svg');
+    if(scroller && svgEl){
+      const svgWidth = parseFloat(svgEl.getAttribute('width')) || 0;
+      scroller.scrollLeft = Math.max(0, svgWidth / 2 - scroller.clientWidth / 2);
+    }
+  }
 
   const lines = node.name.split('\n');
   container.appendChild(buildPopup({
@@ -2810,6 +3395,7 @@ function edgeStyle(type){
   if(type === 'footnote') return { width: 1.6, dash: '6,5' };
   if(type === 'summary') return { width: 4, dash: '0.1,10' };
   if(type === 'merge') return { width: 3.5, dash: '0.1,7' };
+  if(type === 'takreej') return { width: 1.2, dash: '0.1,8' };
   return { width: 1.5, dash: 'none' };
 }
 
@@ -2825,56 +3411,253 @@ function nodeBoxFor(n, elMap){
   return { left: n.x, right: n.x + w, top: n.y, bottom: n.y + h };
 }
 
-// Picks a y for an edge's horizontal jog that clears every book box it would otherwise cross.
-// Prefers the empty gutter between century rows, then the literal midpoint, then a fine sweep.
-function pickClearY(acx, bcx, ay, by, excludeIds, elMap){
-  const lo = Math.min(ay, by), hi = Math.max(ay, by);
-  const x1 = Math.min(acx, bcx), x2 = Math.max(acx, bcx);
-  const literalMid = (ay + by) / 2;
-  if(x2 - x1 < 1) return literalMid; // no horizontal segment to worry about
-
-  const boundaries = ROW_BOUNDARIES
-    .filter(y => y > lo + 2 && y < hi - 2)
-    .sort((p, q) => Math.abs(p - literalMid) - Math.abs(q - literalMid));
-
-  const candidates = [...boundaries, literalMid];
-  for(let step = 15; step <= 200; step += 15){
-    if(literalMid - step > lo) candidates.push(literalMid - step);
-    if(literalMid + step < hi) candidates.push(literalMid + step);
+// Every edge elbow is two vertical legs plus one horizontal jog -- always axis-aligned --
+// so both "does this leg hit that box" and "do these two legs hit each other" reduce to
+// simple 1D range-overlap checks per axis, no general line-segment math needed.
+function segHitsBox(seg, box, pad){
+  if(seg.y1 === seg.y2){ // horizontal leg
+    const y = seg.y1, x1 = Math.min(seg.x1, seg.x2), x2 = Math.max(seg.x1, seg.x2);
+    return y >= box.top - pad && y <= box.bottom + pad && x1 <= box.right + pad && x2 >= box.left - pad;
   }
-
-  const PAD = 6;
-  for(const y of candidates){
-    let hit = false;
-    for(const n of state.nodes){
-      if(excludeIds.has(n.id)) continue;
-      const box = nodeBoxFor(n, elMap);
-      if(y >= box.top - PAD && y <= box.bottom + PAD && x1 <= box.right + PAD && x2 >= box.left - PAD){
-        hit = true;
-        break;
-      }
-    }
-    if(!hit) return y;
-  }
-  return literalMid;
+  const x = seg.x1, y1 = Math.min(seg.y1, seg.y2), y2 = Math.max(seg.y1, seg.y2); // vertical leg
+  return x >= box.left - pad && x <= box.right + pad && y1 <= box.bottom + pad && y2 >= box.top - pad;
 }
 
-// If id is a book formed by combining other books, returns the ids of those source
-// books plus the ids of every edge in that merge chain (source -> "+" -> result).
-function computeCombineHighlight(id){
-  const sourceIds = new Set();
-  const edgeIds = new Set();
-  if(!id) return { sourceIds, edgeIds };
-  state.edges.filter(e => e.type === 'merge' && e.to === id).forEach(e => {
-    edgeIds.add(e.id);
-    const plusNode = state.nodes.find(n => n.id === e.from);
-    if(!plusNode || plusNode.type !== 'combine') return;
-    state.edges.filter(e2 => e2.type === 'merge' && e2.to === plusNode.id).forEach(e2 => {
-      sourceIds.add(e2.from);
-      edgeIds.add(e2.id);
+function segHitsSeg(a, b, pad){
+  const aHoriz = a.y1 === a.y2, bHoriz = b.y1 === b.y2;
+  if(aHoriz && bHoriz){
+    if(Math.abs(a.y1 - b.y1) > pad) return false;
+    const ax1 = Math.min(a.x1, a.x2), ax2 = Math.max(a.x1, a.x2);
+    const bx1 = Math.min(b.x1, b.x2), bx2 = Math.max(b.x1, b.x2);
+    return ax1 <= bx2 + pad && ax2 >= bx1 - pad;
+  }
+  if(!aHoriz && !bHoriz){
+    if(Math.abs(a.x1 - b.x1) > pad) return false;
+    const ay1 = Math.min(a.y1, a.y2), ay2 = Math.max(a.y1, a.y2);
+    const by1 = Math.min(b.y1, b.y2), by2 = Math.max(b.y1, b.y2);
+    return ay1 <= by2 + pad && ay2 >= by1 - pad;
+  }
+  const h = aHoriz ? a : b, v = aHoriz ? b : a; // one of each -> perpendicular crossing test
+  const hx1 = Math.min(h.x1, h.x2), hx2 = Math.max(h.x1, h.x2);
+  const vy1 = Math.min(v.y1, v.y2), vy2 = Math.max(v.y1, v.y2);
+  return v.x1 >= hx1 - pad && v.x1 <= hx2 + pad && h.y1 >= vy1 - pad && h.y1 <= vy2 + pad;
+}
+
+function segsFromPoints(points, from, to){
+  const segs = [];
+  for(let i = 0; i < points.length - 1; i++){
+    segs.push({ x1: points[i][0], y1: points[i][1], x2: points[i+1][0], y2: points[i+1][1], from, to });
+  }
+  return segs;
+}
+
+// Routes a same-or-adjacent-row edge's elbow (vertical / horizontal jog / vertical),
+// searching for a jog height and small endpoint offsets so the path clears every book box
+// it isn't attached to AND every edge already routed earlier in this same render pass -- a
+// simple sequential channel router: each edge becomes an obstacle for the ones drawn after
+// it. Segments belonging to an edge that shares a book with this one are never treated as
+// obstacles, so lines fanning out of (or into) the same book still start from a shared point
+// instead of being forced apart.
+function routeEdgeLocal(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments){
+  const PAD = 6, USED_PAD = 2;
+  const lo = Math.min(ay, by), hi = Math.max(ay, by);
+  const literalMid = (ay + by) / 2;
+  const excludeIds = new Set([a.id, b.id]);
+
+  function yCandidates(x1, x2){
+    if(x2 - x1 < 1) return [literalMid];
+    const boundaries = ROW_BOUNDARIES
+      .filter(y => y > lo + 2 && y < hi - 2)
+      .sort((p, q) => Math.abs(p - literalMid) - Math.abs(q - literalMid));
+    const list = [...boundaries, literalMid];
+    for(let step = 15; step <= 200; step += 15){
+      if(literalMid - step > lo) list.push(literalMid - step);
+      if(literalMid + step < hi) list.push(literalMid + step);
+    }
+    return list;
+  }
+
+  // Scores a candidate path instead of a plain yes/no: a book box hit counts for far more
+  // than a crossing with another line, so if nothing in the search comes back fully clear,
+  // whatever's picked as a last resort at least never cuts through an unrelated book.
+  function collisionScore(segs){
+    let score = 0;
+    for(const n of state.nodes){
+      if(excludeIds.has(n.id)) continue;
+      const box = nodeBoxes[n.id];
+      for(const seg of segs) if(segHitsBox(seg, box, PAD)) score += 500;
+    }
+    for(const used of usedSegments){
+      if(excludeIds.has(used.from) || excludeIds.has(used.to)) continue;
+      for(const seg of segs) if(segHitsSeg(seg, used, USED_PAD)) score += 1;
+    }
+    return score;
+  }
+
+  const OFFSETS = [0, 12, -12, 24, -24, 36, -36];
+  const maxAOff = Math.max(0, aw / 2 - 10);
+  const maxBOff = Math.max(0, bw / 2 - 10);
+
+  let best = null, bestScore = Infinity;
+  for(const aOff of OFFSETS){
+    if(Math.abs(aOff) > maxAOff) continue;
+    for(const bOff of OFFSETS){
+      if(Math.abs(bOff) > maxBOff) continue;
+      const acx = acxDefault + aOff, bcx = bcxDefault + bOff;
+      for(const ymid of yCandidates(Math.min(acx, bcx), Math.max(acx, bcx))){
+        const points = [[acx, ay], [acx, ymid], [bcx, ymid], [bcx, by]];
+        const segs = segsFromPoints(points, a.id, b.id);
+        const score = collisionScore(segs);
+        if(score === 0) return { points, segs };
+        if(score < bestScore){ bestScore = score; best = { points, segs }; }
+      }
+    }
+  }
+
+  // Nothing fully clear within the search budget (rare) -- use whatever scored lowest
+  // (book-box hits weighted far above line crossings) rather than an unchecked guess.
+  return best;
+}
+
+// Reserved, otherwise-empty strip to the left of every book column (books start at
+// LEFT_MARGIN=280; century labels that would sit here are currently hidden). Long-distance
+// edges -- most commentary/summary/footnote chains span several centuries -- get routed
+// through a dedicated vertical lane in this strip instead of straight through however many
+// unrelated rows lie between source and target, which is what was cutting through other
+// books' columns before. `lanes` is shared across one render pass so simultaneous long edges
+// get distinct lanes, while edges whose y-ranges don't overlap can reuse the same one.
+const TRUNK_MARGIN_MIN = 40 + BOARD_X_OFFSET, TRUNK_MARGIN_MAX = 260 + BOARD_X_OFFSET, TRUNK_LANE_SPACING = 8;
+
+function routeEdgeTrunk(a, b, ay, by, acx, bcx, nodeBoxes, usedSegments, lanes){
+  const PAD = 6, USED_PAD = 2;
+  const excludeIds = new Set([a.id, b.id]);
+  const dir = by >= ay ? 1 : -1;
+
+  // Scores a candidate path instead of a plain yes/no: a book box hit counts for far more
+  // than a crossing with another line, so if nothing in the search comes back fully clear,
+  // whatever's picked as a last resort at least never cuts through an unrelated book.
+  function collisionScore(segs){
+    let score = 0;
+    for(const n of state.nodes){
+      if(excludeIds.has(n.id)) continue;
+      const box = nodeBoxes[n.id];
+      for(const seg of segs) if(segHitsBox(seg, box, PAD)) score += 500;
+    }
+    for(const used of usedSegments){
+      if(excludeIds.has(used.from) || excludeIds.has(used.to)) continue;
+      for(const seg of segs) if(segHitsSeg(seg, used, USED_PAD)) score += 1;
+    }
+    return score;
+  }
+
+  // Candidates are tried nearest-first: a handful of positions close to the edge's own
+  // column (so a book sitting far from the margin, like most of the board, doesn't have to
+  // jog all the way across it when a nearer gap between other books would already clear it),
+  // then existing lanes whose reservations don't overlap this edge's y-range, then a fresh
+  // lane as the last resort. Nothing is reserved here; the caller only commits once a
+  // combination actually clears isClear(), so a failed attempt never leaves a stale
+  // reservation behind.
+  function candidateLaneXs(y1, y2){
+    const xs = [];
+    const localBase = Math.min(acx, bcx);
+    [0, 80, 160, 240, 320, 420, 550, 700, 900, 1150].forEach(step => {
+      const x = localBase - step;
+      if(x > TRUNK_MARGIN_MIN) xs.push(x);
     });
+    for(const lane of lanes){
+      const overlaps = lane.intervals.some(([iy1, iy2]) => !(y2 < iy1 - 10 || y1 > iy2 + 10));
+      if(!overlaps) xs.push(lane.x);
+    }
+    xs.push(Math.min(TRUNK_MARGIN_MIN + lanes.length * TRUNK_LANE_SPACING, TRUNK_MARGIN_MAX));
+    return xs;
+  }
+
+  function commitLane(laneX, y1, y2){
+    let lane = lanes.find(l => l.x === laneX);
+    if(!lane){ lane = { x: laneX, intervals: [] }; lanes.push(lane); }
+    lane.intervals.push([y1, y2]);
+  }
+
+  const GAPS = [24, 40, 60, 90, 130, 180, 240];
+  let best = null, bestScore = Infinity, bestLaneX = null, bestYTop = 0, bestYBot = 0;
+  for(const gap of GAPS){
+    const yNearA = ay + dir * gap;
+    const yNearB = by - dir * gap;
+    const yTop = Math.min(yNearA, yNearB), yBot = Math.max(yNearA, yNearB);
+    for(const laneX of candidateLaneXs(yTop, yBot)){
+      const points = [[acx, ay], [acx, yNearA], [laneX, yNearA], [laneX, yNearB], [bcx, yNearB], [bcx, by]];
+      const segs = segsFromPoints(points, a.id, b.id);
+      const score = collisionScore(segs);
+      if(score === 0){
+        commitLane(laneX, yTop, yBot);
+        return { points, segs };
+      }
+      if(score < bestScore){
+        bestScore = score;
+        best = { points, segs };
+        bestLaneX = laneX; bestYTop = yTop; bestYBot = yBot;
+      }
+    }
+  }
+
+  // Nothing fully clear within the search budget (rare) -- use whatever scored lowest
+  // (book-box hits weighted far above line crossings) rather than an unchecked guess.
+  commitLane(bestLaneX, bestYTop, bestYBot);
+  return best;
+}
+
+// A book's "row" is which century band its y falls in. Edges within the same or an adjacent
+// row are routed locally (short elbow, searched for a clear jog); edges spanning 2+ rows --
+// most commentary/summary chains, since they connect books centuries apart -- are routed
+// through the dedicated trunk lanes instead, so they never sweep through intervening rows.
+function routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, lanes){
+  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
+  const spanRows = Math.abs(rowOf(a.y) - rowOf(b.y));
+  const spanX = Math.abs(acxDefault - bcxDefault);
+  // A same-row edge between two far-apart books has the same problem as a multi-row one --
+  // its jog has to sweep past however many books sit between them -- so it gets the same
+  // trunk treatment even though it never crosses a century boundary.
+  if(spanRows >= 2 || spanX > 500){
+    return routeEdgeTrunk(a, b, ay, by, acxDefault, bcxDefault, nodeBoxes, usedSegments, lanes);
+  }
+  return routeEdgeLocal(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments);
+}
+
+// Everything connected to `id`: the ids of the other real books it links to (nodeIds),
+// the "+" combine nodes on the way to those books (throughIds, so they don't get dimmed),
+// and every edge involved (edgeIds). A "+" combine node is a bookkeeping detail, not a real
+// book, so edges through it are followed one hop further to reach the real book on its far side.
+function computeHighlight(id){
+  const nodeIds = new Set();
+  const throughIds = new Set();
+  const edgeIds = new Set();
+  if(!id) return { nodeIds, throughIds, edgeIds };
+  state.edges.forEach(e => {
+    if(e.from !== id && e.to !== id) return;
+    edgeIds.add(e.id);
+    const otherId = e.from === id ? e.to : e.from;
+    const otherNode = state.nodes.find(n => n.id === otherId);
+    if(!otherNode) return;
+    if(otherNode.type === 'combine'){
+      throughIds.add(otherNode.id);
+      if(e.from === id){
+        // id feeds into this "+" -> the only real connection is the single book that
+        // comes out the other side. Sibling books that feed the same "+" aren't
+        // connected to id, just to that same result -- don't leak them in here.
+        const resultEdge = state.edges.find(e2 => e2.from === otherNode.id);
+        if(resultEdge){ edgeIds.add(resultEdge.id); nodeIds.add(resultEdge.to); }
+      } else {
+        // id IS the merge result -> every book that fed into it is a real connection.
+        state.edges.filter(e2 => e2.to === otherNode.id).forEach(e2 => {
+          edgeIds.add(e2.id);
+          nodeIds.add(e2.from);
+        });
+      }
+    } else {
+      nodeIds.add(otherId);
+    }
   });
-  return { sourceIds, edgeIds };
+  return { nodeIds, throughIds, edgeIds };
 }
 
 function render(){
@@ -2884,7 +3667,7 @@ function render(){
   const canvas = document.getElementById('canvas');
   document.querySelectorAll('.node').forEach(n => n.remove());
 
-  const combineHL = computeCombineHighlight(viewedNode);
+  const HL = computeHighlight(viewedNode);
 
   const elMap = {};
   state.nodes.forEach(n => {
@@ -2896,7 +3679,8 @@ function render(){
     if(combineSet.has(n.id)) cls += ' multiselect';
     if(n.manuscript) cls += ' manuscript';
     if(viewedNode === n.id) cls += ' viewed';
-    if(combineHL.sourceIds.has(n.id)) cls += ' combine-source';
+    if(HL.nodeIds.has(n.id)) cls += ' connected';
+    if(viewedNode && n.id !== viewedNode && !HL.nodeIds.has(n.id) && !HL.throughIds.has(n.id)) cls += ' dimmed';
     div.className = cls;
     div.style.left = n.x + 'px';
     div.style.top = n.y + 'px';
@@ -2955,27 +3739,55 @@ function render(){
   const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
   svg.appendChild(defs);
 
-  function subdivideElbow(p1, p2, p3, p4, segsPerLeg){
-    const pts = [p1];
-    const legs = [[p1,p2],[p2,p3],[p3,p4]];
-    legs.forEach(([from,to]) => {
-      for(let i=1;i<=segsPerLeg;i++){
-        const t = i/segsPerLeg;
+  // points is a variable-length polyline (4 points for a local elbow, 6 for a trunk-routed
+  // one) -- subdivide every leg the same way regardless of how many there are.
+  function subdivideElbow(points, segsPerLeg){
+    const pts = [points[0]];
+    for(let i = 0; i < points.length - 1; i++){
+      const from = points[i], to = points[i+1];
+      for(let s = 1; s <= segsPerLeg; s++){
+        const t = s / segsPerLeg;
         pts.push([ from[0] + (to[0]-from[0])*t, from[1] + (to[1]-from[1])*t ]);
       }
-    });
+    }
     return pts;
   }
 
-  state.edges.forEach(e => {
-    const a = state.nodes.find(n => n.id === e.from);
-    const b = state.nodes.find(n => n.id === e.to);
-    if(!a || !b) return;
+  // Every node's box, read from the DOM once up front. routeEdge's collision search reads
+  // this hundreds of times per edge -- going through elMap.offsetWidth/offsetHeight that
+  // often forces a browser layout recalculation on nearly every call, which is what made
+  // routing the whole board take seconds; a plain object lookup doesn't.
+  const nodeBoxes = {};
+  state.nodes.forEach(n => { nodeBoxes[n.id] = nodeBoxFor(n, elMap); });
+
+  // Route every edge first, hardest (most century rows spanned, so least room to dodge)
+  // first, so those get first pick of the trunk lanes and the open margin, and easier/local
+  // edges route around whatever's already been placed -- rather than whatever order edges
+  // happen to appear in state.edges. Drawing below still follows that original order (so
+  // z-stacking / admin click targets don't shuffle), just looking up the route computed here.
+  const nodeById = {};
+  state.nodes.forEach(n => { nodeById[n.id] = n; });
+  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
+  const edgeSpan = e => {
+    const a = nodeById[e.from], b = nodeById[e.to];
+    if(!a || !b) return 0;
+    // Row span dominates the ordering; a wide same-row hop (routeEdge's other trunk trigger)
+    // still floats ahead of short local edges via the x-distance term.
+    return Math.abs(rowOf(a.y) - rowOf(b.y)) * 100000 + Math.abs(a.x - b.x);
+  };
+  const routingOrder = state.edges.filter(e => nodeById[e.from] && nodeById[e.to])
+    .slice().sort((e1, e2) => edgeSpan(e2) - edgeSpan(e1));
+
+  const usedSegments = [];
+  const trunkLanes = [];
+  const routeById = {};
+  routingOrder.forEach(e => {
+    const a = nodeById[e.from], b = nodeById[e.to];
     const aEl = elMap[a.id], bEl = elMap[b.id];
     const aw = aEl ? aEl.offsetWidth : 120, ah = aEl ? aEl.offsetHeight : 40;
     const bw = bEl ? bEl.offsetWidth : 120, bh = bEl ? bEl.offsetHeight : 40;
 
-    const acx = a.x + aw/2, bcx = b.x + bw/2;
+    const acxDefault = a.x + aw/2, bcxDefault = b.x + bw/2;
     let ay, by;
     if(b.y >= a.y){
       ay = a.y + ah;
@@ -2984,11 +3796,20 @@ function render(){
       ay = a.y;
       by = b.y + bh;
     }
-    const ymid = pickClearY(acx, bcx, ay, by, new Set([a.id, b.id]), elMap);
+    const route = routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, trunkLanes);
+    usedSegments.push(...route.segs);
+    routeById[e.id] = route;
+  });
+
+  state.edges.forEach(e => {
+    const a = nodeById[e.from];
+    const b = nodeById[e.to];
+    if(!a || !b) return;
+    const points = routeById[e.id].points;
     const color = edgeColor(a, b);
     const style = edgeStyle(e.type);
 
-    const isHL = !!viewedNode && (e.from === viewedNode || e.to === viewedNode || combineHL.edgeIds.has(e.id));
+    const isHL = !!viewedNode && HL.edgeIds.has(e.id);
     const dimmed = !!viewedNode && !isHL;
     const widthMul = isHL ? 1.7 : 1;
 
@@ -3000,8 +3821,7 @@ function render(){
     if(isHL) path.style.filter = 'drop-shadow(0 0 3px rgba(122,46,46,0.6))';
 
     if(e.type === 'commentary'){
-      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
-      const pts = subdivideElbow(p1, p2, p3, p4, 5);
+      const pts = subdivideElbow(points, 5);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', 1.8 * widthMul);
@@ -3024,8 +3844,7 @@ function render(){
       path.setAttribute('marker-mid', `url(#${markerId})`);
       path.setAttribute('marker-end', `url(#${markerId})`);
     } else if(e.type === 'merge'){
-      const p1 = [acx, ay], p2 = [acx, ymid], p3 = [bcx, ymid], p4 = [bcx, by];
-      const pts = subdivideElbow(p1, p2, p3, p4, 14);
+      const pts = subdivideElbow(points, 14);
       const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', 1.2 * widthMul);
@@ -3047,8 +3866,33 @@ function render(){
 
       path.setAttribute('marker-mid', `url(#${markerId})`);
       path.setAttribute('marker-end', `url(#${markerId})`);
+    } else if(e.type === 'takreej'){
+      // Takreej (تخريج, hadith-verification works) gets its own repeating symbol -- a
+      // diamond, distinct from commentary's arrows and merge's stars -- per the legend.
+      const pts = subdivideElbow(points, 10);
+      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
+      path.setAttribute('d', d);
+      path.setAttribute('stroke-width', 1.2 * widthMul);
+
+      const markerId = 'diamond-' + e.id;
+      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+      marker.setAttribute('id', markerId);
+      marker.setAttribute('viewBox', '0 0 10 10');
+      marker.setAttribute('refX', '5');
+      marker.setAttribute('refY', '5');
+      marker.setAttribute('markerWidth', '5.5');
+      marker.setAttribute('markerHeight', '5.5');
+      marker.setAttribute('orient', '0');
+      const diamondShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      diamondShape.setAttribute('d', 'M 5,1 L 9,5 L 5,9 L 1,5 Z');
+      diamondShape.setAttribute('fill', color);
+      marker.appendChild(diamondShape);
+      defs.appendChild(marker);
+
+      path.setAttribute('marker-mid', `url(#${markerId})`);
+      path.setAttribute('marker-end', `url(#${markerId})`);
     } else {
-      const d = `M ${acx} ${ay} L ${acx} ${ymid} L ${bcx} ${ymid} L ${bcx} ${by}`;
+      const d = points.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
       path.setAttribute('d', d);
       path.setAttribute('stroke-width', style.width * widthMul);
       if(style.dash !== 'none') path.setAttribute('stroke-dasharray', style.dash);
