@@ -713,6 +713,13 @@
     line-height:1.7;
   }
   #landing-card ul li{ margin-bottom:4px; }
+  #landing-card .viewing-note{
+    font-size:13.5px;
+    font-style:italic;
+    color:#6b5d4f;
+    border-inline-start:3px solid var(--line);
+    padding-inline-start:12px;
+  }
   #landing-card .enter-row{
     display:flex;
     align-items:center;
@@ -751,9 +758,14 @@
         <li>Click any book to see notes about it and its author, and to highlight its connections.</li>
         <li>Lines show how books relate: commentary (arrowed), footnote (dashed), summary (dotted), takreej (diamond), and combined works (star-studded).</li>
         <li>Line color matches the book the relationship comes from.</li>
+        <li>The board extends beyond the visible screen; please scroll in all directions to view the diagram in its entirety.</li>
         <li>Use Ctrl/Cmd + scroll to zoom, and drag to pan around the board.</li>
         <li>Search for a book by name using the search box once you're on the board.</li>
       </ul>
+      <p class="viewing-note">
+        For the best experience, it is recommended that this diagram be viewed on a desktop or laptop computer,
+        as the larger display allows the connections between works to be seen with greater clarity.
+      </p>
       <div class="enter-row">
         <label class="skip-label"><input type="checkbox" id="skipLandingCheckbox"> Don't show this again on this device</label>
         <button id="enterBtn" onclick="enterBoard()">View the diagram →</button>
