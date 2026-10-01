@@ -183,6 +183,7 @@
   }
   .node.hb-box{ overflow:visible; white-space:normal; }
   .node.virtual{ cursor:default; }
+  body.admin .node.virtual{ cursor:grab; }
   .hb-box--base{ --c:var(--root); --tint:#E9EBED; }
   .node.hb-box .hb-rel{ border-radius:5px 5px 0 0; }
   .node.hb-box .hb-in{ border-radius:0 0 5px 5px; }
@@ -800,6 +801,7 @@
       <button id="combineBtn" class="secondary" onclick="toggleCombineMode()">⊕ Combine books</button>
       <button id="connectBtn" class="secondary" onclick="toggleConnectMode()">🔗 Connect mode</button>
       <button class="secondary" onclick="clearSelection()">Cancel selection</button>
+      <button class="secondary" onclick="resetLayout()">↺ Reset layout</button>
       <button class="secondary" onclick="resetAll()">Reset board</button>
     </div>
 
@@ -3418,7 +3420,7 @@ function updateHint(){
     hint.textContent = 'Click one book, then another, to connect them. Click "🔗 Connect mode" again to turn it off.';
     return;
   }
-  hint.textContent = 'Click a book to view or edit its notes. Turn on "🔗 Connect mode" to draw new connections, or "⊕ Combine books" to merge several into a new work. Hover a book for its manuscript/color/delete controls, or double-click to rename. Ctrl/Cmd + scroll to zoom.';
+  hint.textContent = 'Drag a book to move it with everything beneath it (hold Shift to move just that book). ' + (layoutStatus ? layoutStatus + '  •  ' : '') + 'Click a book to view or edit its notes. Turn on "🔗 Connect mode" to draw new connections, or "⊕ Combine books" to merge several into a new work. Hover a book for its manuscript/color/delete controls, or double-click to rename. Ctrl/Cmd + scroll to zoom.';
 }
 
 function updateModeButtons(){
@@ -3519,38 +3521,52 @@ function makeEdge(type){
 }
 
 function startDrag(id, ev){
-  if(!isAdmin) return;
-  const node = state.nodes.find(n => n.id === id);
+  if(!isAdmin || !lastLayout || !lastLayout.pos[id]) return;
+  if(!state.offsets) state.offsets = JSON.parse(JSON.stringify(getOffsets()));
   const wrap = document.getElementById('canvas-wrap');
+  const cur = k => state.offsets[k] || { dx:0, dy:0 };
+  const kids = (treeInfo.children[id] || []).slice();
   dragInfo = {
     id,
     moved: false,
     startX: ev.clientX + wrap.scrollLeft,
     startY: ev.clientY + wrap.scrollTop,
-    origX: node.x,
-    origY: node.y
+    origX: lastLayout.pos[id].x,
+    origY: lastLayout.pos[id].y,
+    base: { ...cur(id) },
+    kids: kids.map(k => ({ id:k, base:{ ...cur(k) } }))
   };
   document.addEventListener('mousemove', onDrag);
   document.addEventListener('mouseup', endDrag);
 }
 
+// Drag a book to move it and everything beneath it; hold Shift to move just that book.
 function onDrag(ev){
   if(!dragInfo) return;
   const wrap = document.getElementById('canvas-wrap');
-  const dx = ((ev.clientX + wrap.scrollLeft) - dragInfo.startX) / zoom;
-  const dy = ((ev.clientY + wrap.scrollTop) - dragInfo.startY) / zoom;
+  let dx = ((ev.clientX + wrap.scrollLeft) - dragInfo.startX) / zoom;
+  let dy = ((ev.clientY + wrap.scrollTop) - dragInfo.startY) / zoom;
   if(Math.abs(dx) > 3 || Math.abs(dy) > 3) dragInfo.moved = true;
-  const node = state.nodes.find(n => n.id === dragInfo.id);
-  node.x = Math.max(0, dragInfo.origX + dx);
-  node.y = Math.max(0, dragInfo.origY + dy);
+  if(!dragInfo.moved) return;
+  dx = Math.max(dx, -dragInfo.origX);
+  dy = Math.max(dy, -dragInfo.origY);
+  state.offsets[dragInfo.id] = { dx:dragInfo.base.dx + dx, dy:dragInfo.base.dy + dy };
+  dragInfo.kids.forEach(k => {
+    state.offsets[k.id] = ev.shiftKey ? { dx:k.base.dx - dx, dy:k.base.dy - dy } : { ...k.base };
+  });
   render();
 }
 
 function endDrag(){
   document.removeEventListener('mousemove', onDrag);
   document.removeEventListener('mouseup', endDrag);
-  if(dragInfo && dragInfo.moved) saveState();
+  const moved = dragInfo && dragInfo.moved;
   dragInfo = null;
+  if(moved){
+    state.offsets = cleanOffsets(state.offsets);
+    saveState();
+    publishLayout();
+  }
 }
 
 function edgeStyle(type){
@@ -3927,6 +3943,129 @@ function buildTree(){
 let treeInfo = { children:{}, parent:{}, rel:{}, edgeIds:{}, roots:[], isolated:[], hasVirtual:false };
 function bookRel(id){ return treeInfo.rel[id] || null; }
 
+// ---- manual moves: offsets from the automatic layout, kept per book --------------------------
+// A book's offset moves it and everything beneath it; its connector from its parent is then drawn
+// as a simple elbow. Offsets are saved in this browser and, with a GitHub token, published to
+// layout.json so every visitor sees them.
+let publishedOffsets = {};
+let layoutStatus = '';
+let lastLayout = null;
+
+function getOffsets(){
+  if(!isAdmin) return publishedOffsets;
+  return state.offsets || publishedOffsets;
+}
+
+function applyManualOffsets(lay){
+  const offs = getOffsets();
+  const eff = {};
+  const E = id => {
+    if(eff[id]) return eff[id];
+    const o = offs[id] || { dx:0, dy:0 };
+    const par = treeInfo.parent[id];
+    const pe = par !== undefined ? E(par) : { dx:0, dy:0 };
+    return eff[id] = { dx:o.dx + pe.dx, dy:o.dy + pe.dy };
+  };
+  Object.keys(lay.pos).forEach(id => {
+    const e = E(id);
+    lay.pos[id].x = Math.max(0, lay.pos[id].x + e.dx);
+    lay.pos[id].y = Math.max(0, lay.pos[id].y + e.dy);
+  });
+
+  const out = [], moved = new Set();
+  const moveSeg = (s, e) => ({ x1:s.x1 + e.dx, y1:s.y1 + e.dy, x2:s.x2 + e.dx, y2:s.y2 + e.dy, e:s.e });
+  lay.segs.forEach(s => {
+    if(s.c){
+      const o = offs[s.c];
+      if(o && (o.dx || o.dy)){ moved.add(s.c); return; }
+      out.push(moveSeg(s, E(s.c)));
+    } else if(s.p){
+      out.push(moveSeg(s, E(s.p)));
+    } else out.push(s);
+  });
+  moved.forEach(c => {
+    const par = treeInfo.parent[c];
+    if(par === undefined || !lay.pos[par] || !lay.pos[c]) return;
+    const ps = lay.size(par), cs = lay.size(c);
+    const px = lay.pos[par].x + ps.w / 2, pb = lay.pos[par].y + ps.h;
+    const cx = lay.pos[c].x + cs.w / 2, ct = lay.pos[c].y;
+    const mid = (pb + ct) / 2, e = treeInfo.edgeIds[c] || [];
+    out.push({ x1:px, y1:pb, x2:px, y2:mid, e }, { x1:px, y1:mid, x2:cx, y2:mid, e }, { x1:cx, y1:mid, x2:cx, y2:ct, e });
+  });
+  lay.segs = out;
+
+  let maxX = 0, maxY = 0;
+  Object.keys(lay.pos).forEach(id => {
+    const s = lay.size(id);
+    maxX = Math.max(maxX, lay.pos[id].x + s.w);
+    maxY = Math.max(maxY, lay.pos[id].y + s.h);
+  });
+  lay.maxX = Math.max(lay.maxX, maxX);
+  lay.maxY = Math.max(lay.maxY, maxY);
+}
+
+function cleanOffsets(o){
+  const r = {};
+  Object.keys(o).forEach(id => {
+    if(o[id] && (o[id].dx || o[id].dy)) r[id] = { dx:Math.round(o[id].dx), dy:Math.round(o[id].dy) };
+  });
+  return r;
+}
+
+async function publishLayout(){
+  const token = localStorage.getItem(GH_TOKEN_KEY);
+  if(!token){
+    layoutStatus = 'Layout saved in this browser only — set a GitHub token (toolbar) to publish it for everyone.';
+    updateHint();
+    return;
+  }
+  layoutStatus = 'Publishing layout…';
+  updateHint();
+  try{
+    const apiUrl = `https://api.github.com/repos/${GH_REPO}/contents/layout.json`;
+    const headers = { 'Authorization':'token ' + token, 'Accept':'application/vnd.github+json' };
+    const getRes = await fetch(apiUrl, { headers });
+    let sha;
+    if(getRes.ok) sha = (await getRes.json()).sha;
+    else if(getRes.status !== 404) throw new Error('Could not read layout.json (HTTP ' + getRes.status + ')');
+    const putRes = await fetch(apiUrl, {
+      method:'PUT',
+      headers:{ ...headers, 'Content-Type':'application/json' },
+      body:JSON.stringify({
+        message:'Update board layout',
+        content:b64EncodeUtf8(JSON.stringify(cleanOffsets(state.offsets || {}), null, 2)),
+        sha
+      })
+    });
+    if(!putRes.ok){
+      const errJson = await putRes.json().catch(() => ({}));
+      throw new Error(errJson.message || ('GitHub API error ' + putRes.status));
+    }
+    layoutStatus = 'Layout published — live for everyone within about a minute.';
+  }catch(e){
+    layoutStatus = 'Failed to publish layout: ' + e.message;
+  }
+  updateHint();
+}
+
+async function loadPublishedLayout(){
+  try{
+    const res = await fetch('layout.json', { cache:'no-store' });
+    if(!res.ok) return;
+    publishedOffsets = await res.json();
+    render();
+  }catch(e){ /* no layout.json yet, or not reachable (e.g. file://) -- keep the automatic layout */ }
+}
+
+function resetLayout(){
+  if(!isAdmin) return;
+  if(!confirm('Put every book back in its automatic position?')) return;
+  state.offsets = {};
+  saveState();
+  render();
+  publishLayout();
+}
+
 // Positions every book (writes node.x / node.y) and collects the connector segments.
 // elMap must hold every box's DOM element, already in the page so it can be measured.
 function layoutBoard(tree, elMap){
@@ -3950,7 +4089,7 @@ function layoutBoard(tree, elMap){
     into.items.push(...b.items); into.segs.push(...b.segs);
     into.minX = Math.min(into.minX, b.minX); into.maxX = Math.max(into.maxX, b.maxX); into.h = Math.max(into.h, b.h);
   };
-  const seg = (b, x1, y1, x2, y2, e) => b.segs.push({ x1, y1, x2, y2, e });
+  const seg = (b, x1, y1, x2, y2, e, c, p) => b.segs.push({ x1, y1, x2, y2, e, c, p });
 
   // Children stacked under their parent box: a rail down the parent's left side with a tick to
   // each child; a child's own children nest one indent further in.
@@ -3968,8 +4107,8 @@ function layoutBoard(tree, elMap){
     kids(pid).forEach(k => {
       const s = size(k);
       const tick = y + Math.min(s.h / 2, 24);
-      seg(out, rx, prevY, rx, tick, eids(k));
-      seg(out, rx, tick, cl, tick, eids(k));
+      seg(out, rx, prevY, rx, tick, eids(k), null, pid);
+      seg(out, rx, tick, cl, tick, eids(k), k);
       prevY = tick;
       y = stackMember(k, cl, y, out) + G.stack;
     });
@@ -3984,8 +4123,8 @@ function layoutBoard(tree, elMap){
     run.forEach(k => {
       const s = size(k);
       const tick = y + Math.min(s.h / 2, 24);
-      seg(b, 0, prevY, 0, tick, eids(k));
-      seg(b, 0, tick, G.rail, tick, eids(k));
+      seg(b, 0, prevY, 0, tick, eids(k), null, tree.parent[k]);
+      seg(b, 0, tick, G.rail, tick, eids(k), k);
       prevY = tick;
       b.items.push({ id:k, x:G.rail, y });
       grow(b, 0, y, G.rail + s.w, s.h);
@@ -4004,7 +4143,7 @@ function layoutBoard(tree, elMap){
     if(tree.rel[id] === 'comb' && ks.length === 1){
       const c = layoutNode(ks[0]);
       shift(c, 0, s.h + G.level);
-      seg(b, 0, s.h, 0, s.h + G.level, eids(ks[0]));
+      seg(b, 0, s.h, 0, s.h + G.level, eids(ks[0]), ks[0]);
       absorb(b, c);
       return b;
     }
@@ -4040,17 +4179,17 @@ function layoutBoard(tree, elMap){
     cols.forEach(c => { shift(c.block, -mid, colTop); c.dropX -= mid; });
 
     const allE = [].concat(...cols.map(c => eids(c.first)));
-    seg(b, 0, s.h, 0, busY, allE);
+    seg(b, 0, s.h, 0, busY, allE, null, id);
     const xs = [0, ...cols.map(c => c.dropX)].sort((p, q) => p - q);
     for(let i = 0; i < xs.length - 1; i++){
       if(xs[i] === xs[i + 1]) continue;
       const side = xs[i + 1] <= 0
         ? cols.filter(c => c.dropX <= xs[i])
         : cols.filter(c => c.dropX >= xs[i + 1]);
-      seg(b, xs[i], busY, xs[i + 1], busY, [].concat(...side.map(c => eids(c.first))));
+      seg(b, xs[i], busY, xs[i + 1], busY, [].concat(...side.map(c => eids(c.first))), null, id);
     }
     cols.forEach(c => {
-      seg(b, c.dropX, busY, c.dropX, colTop, eids(c.first));
+      seg(b, c.dropX, busY, c.dropX, colTop, eids(c.first), c.first);
       absorb(b, c.block);
     });
     return b;
@@ -4117,7 +4256,7 @@ function layoutBoard(tree, elMap){
   const segs = [];
   placed.forEach(p => {
     p.block.items.forEach(i => { pos[i.id] = { x:p.ax + i.x, y:p.ay + i.y }; });
-    p.block.segs.forEach(s => segs.push({ x1:s.x1 + p.ax, y1:s.y1 + p.ay, x2:s.x2 + p.ax, y2:s.y2 + p.ay, e:s.e }));
+    p.block.segs.forEach(s => segs.push({ x1:s.x1 + p.ax, y1:s.y1 + p.ay, x2:s.x2 + p.ax, y2:s.y2 + p.ay, e:s.e, c:s.c, p:s.p }));
   });
   let maxX = right, maxY = bottom;
   Object.keys(pos).forEach(id => {
@@ -4250,11 +4389,14 @@ function render(){
     v.className = 'node virtual hb-box hb-box--root';
     v.innerHTML = '<span class="hb-in"><span class="hb-t">ظاهر الرواية</span>' +
       '<span class="hb-a" dir="auto">محمد بن الحسن الشيباني (d. 189 AH)</span></span>';
+    if(isAdmin) v.onmousedown = (ev) => { startDrag(VIRTUAL_ROOT, ev); };
     canvas.appendChild(v);
     elMap[VIRTUAL_ROOT] = v;
   }
 
   const lay = layoutBoard(treeInfo, elMap);
+  applyManualOffsets(lay);
+  lastLayout = lay;
   Object.keys(lay.pos).forEach(id => {
     const el = elMap[id];
     el.style.left = lay.pos[id].x + 'px';
@@ -4343,7 +4485,7 @@ function centerInitialView(){
 }
 
 loadState().then(() => {
-  buildTimeline(); applyZoom(); centerInitialView(); loadPublishedNotes();
+  buildTimeline(); applyZoom(); centerInitialView(); loadPublishedNotes(); loadPublishedLayout();
   // Box heights depend on the web fonts, so lay the board out again once they have loaded.
   if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => { render(); centerInitialView(); });
 });
