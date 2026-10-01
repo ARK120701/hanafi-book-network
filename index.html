@@ -1224,10 +1224,72 @@ function ensureExtraContent(){
 
   addEdge({ id: uid(), from:'tanwirabsar', to:'durrmukhtar', type:'commentary' });
   addEdge({ id: uid(), from:'durrmukhtar', to:'ibnabidin', type:'footnote' });
-  addEdge({ id: uid(), from:'durrmukhtar', to:'tahtawifootnote', type:'footnote' });
-  addEdge({ id: uid(), from:'durrmukhtar', to:'halabi', type:'footnote' });
-  addEdge({ id: uid(), from:'durrmukhtar', to:'sharhminhatghaffar', type:'commentary' });
+  addEdge({ id: uid(), from:'durrmukhtar', to:'tahtawifootnote', type:'commentary' });
+  addEdge({ id: uid(), from:'tanwirabsar', to:'sharhminhatghaffar', type:'commentary' });
   addEdge({ id: uid(), from:'durrmukhtar', to:'tawaliuanwar', type:'commentary' });
+
+  // Books written on al-Durr al-Mukhtār, as listed on the design page. Authors are given as the
+  // design page gives them (English); boxNote is the small italic line under a box.
+  const DURR_BOOKS = [
+    ['durrtuhfatakhyar', 'commentary', 'تحفة الأخيار على الدر المختار', 'Tuḥfat al-Akhyār ʿalā al-Durr al-Mukhtār', 'إبراهيم بن مصطفى الحلبي (d. 1190H)'],
+    ['durrmiftahasrar', 'commentary', 'مفتاح الأسرار ولوائح الأفكار في شرح الدر المختار', 'Miftāḥ al-Asrār wa Lawāʾiḥ al-Afkār fī Sharḥ al-Durr al-Mukhtār', 'ابن عبد الرزاق الدمشقي (d. 1138H)', 'ʿAbd al-Raḥmān ibn Ibrāhīm ibn Aḥmad'],
+    ['durrdalail', 'commentary', 'دلائل الأسرار على الدر المختار', 'Dalāʾil al-Asrār ʿalā al-Durr al-Mukhtār', 'خليل بن محمد الفتال الدمشقي (d. 1186H)'],
+    ['durrislahasfar', 'commentary', 'إصلاح الأسفار عن وجوه بعض مكدرات الدر المختار', 'Iṣlāḥ al-Asfār ʿan Wujūh Baʿḍ Mukaddirāt al-Durr al-Mukhtār', 'حسن بن إبراهيم الجبرتي (d. 1188H)'],
+    ['durrnukhba', 'commentary', 'نخبة الأفكار على الدر المختار', 'Nukhbat al-Afkār ʿalā al-Durr al-Mukhtār', 'محمد صالح المدني (قاضي زاده) (d. 1087H)'],
+    ['durrsilknidar', 'commentary', 'سلك النضار على الدر المختار', 'Silk al-Niḍār ʿalā al-Durr al-Mukhtār', 'عبد القادر بن صالح (ابن قوصي) (d. 1199H)'],
+    ['durrhashiyarahmati', 'commentary', 'حاشية على الدر المختار', 'Ḥāshiyah ʿalā al-Durr al-Mukhtār (al-Raḥmatī)', 'مصطفى بن محمد الرحمتي (d. 1205H)'],
+    ['durrqurratanwar', 'commentary', 'قرة الأنوار في حاشية الدر المختار', 'Qurrat al-Anwār fī Ḥāshiyat al-Durr al-Mukhtār', 'القاضي أبو الطيب السندي المدني (d. 1145H)'],
+    ['durrhashiyaamin', 'commentary', 'حاشية على الدر المختار', 'Ḥāshiyah ʿalā al-Durr al-Mukhtār (Amīn Mīr Aghānī)', 'السيد أمين مير أغاني المكي (d. 1161H)'],
+    ['durrsharhhamzah', 'commentary', 'شرح الدر المختار', 'Sharḥ al-Durr al-Mukhtār (Ḥamzah al-Sindī)', 'حمزة بن إبراهيم فيض الله السندي (d. 1212H)'],
+    ['durrsharhkhalasi', 'commentary', 'الشرح على الدر المختار', 'Al-Sharḥ ʿalā al-Durr al-Mukhtār', 'عبد القادر الخلاصي (d. 1284H)'],
+    ['durrhashiyatawaqi', 'commentary', 'حاشية على الدر المختار', 'Ḥāshiyah ʿalā al-Durr al-Mukhtār (al-Tawāqī)', 'عبد الرحمن الدمشقي (التواقي) (d. 1123H)'],
+    ['durrkashfastar', 'commentary', 'كشف الأستار عن الدر المختار', 'Kashf al-Astār ʿan al-Durr al-Mukhtār', 'محمد نظام الدين الكيراني الهندي'],
+    ['durrghayatawtar', 'commentary', 'غاية الأوطار: ترجمة الدر المختار وشرحه', 'Ghāyat al-Awṭār: Tarjamat al-Durr al-Mukhtār wa Sharḥihi', 'مولوي خرم علي البلهوري (d. 1271H)', 'An Urdu translation and commentary'],
+    ['durrtaaliqanwar', 'footnote', 'تعاليق الأنوار على الدر المختار', 'Taʿālīq al-Anwār ʿalā al-Durr al-Mukhtār', 'عبد المولى بن عبد الله المغربي الدمشقي (d. 1238H)'],
+    ['durrtaliqsaihani', 'footnote', 'تعليقات الصائحاني على الدر المختار', 'Taʿlīqāt al-Ṣāʾiḥānī ʿalā al-Durr al-Mukhtār', 'إبراهيم الصائحاني الدمشقي (d. 1197H)', 'One of the muftīs of Damascus'],
+    ['durrtaliqsindi', 'footnote', 'تعليقات على الدر المختار', 'Taʿlīqāt ʿalā al-Durr al-Mukhtār (Abū al-Ḥasan al-Sindī)', 'أبو الحسن محمد بن صادق بن عبد الهادي السندي (d. 1187H)', 'Known as Abū al-Ḥasan al-Sindī al-Ṣaghīr'],
+    ['durrtaliqansari', 'footnote', 'تعليقات على الدر المختار', 'Taʿlīqāt ʿalā al-Durr al-Mukhtār (al-Anṣārī)', 'القاضي جمال الدين محمد الأنصاري (القرن 12 هـ)'],
+    ['durrtaliqafghani', 'footnote', 'تعليقات على الدر المختار', 'Taʿlīqāt ʿalā al-Durr al-Mukhtār (al-Afghānī)', 'عبد الحكيم الأفغاني (d. 1326H)'],
+    ['durrtaliqtabaqjili', 'footnote', 'تعليقات على الدر المختار', 'Taʿlīqāt ʿalā al-Durr al-Mukhtār (al-Ṭabaqjilī)', 'محمد سعيد الطبقجلي البغدادي (d. 1273H)'],
+    ['durrhawashiahmadi', 'footnote', 'حواش وتعليق على شرح الدر المختار', 'Ḥawāshin wa Taʿlīq ʿalā Sharḥ al-Durr al-Mukhtār', 'إسماعيل بن أحمد الأحمدي الحافظ (d. 1288H)'],
+    ['durrtaliqilahabadi', 'footnote', 'تعليقات على الدر المختار', 'Taʿlīqāt ʿalā al-Durr al-Mukhtār (al-Ilāhābādī)', 'عبد الحق الإلهابادي (d. 1333H)']
+  ];
+  DURR_BOOKS.forEach(b => {
+    addNode({ id:b[0], name:b[2] + '\n' + b[3], x:0, y:0, author:b[4], boxNote:b[5] });
+    addEdge({ id: uid(), from:'durrmukhtar', to:b[0], type:b[1] });
+    const have = state.nodes.find(x => x.id === b[0]);
+    if(have && have.author !== b[4]){ have.author = b[4]; changed = true; }
+  });
+
+  // Old Durr links that the design page reads differently: Ibn ʿĀbidīn and al-Ṭaḥṭāwī are
+  // commentaries (not footnotes), and Minḥat al-Ghaffār hangs off Tanwīr al-Abṣār itself.
+  if(!state._durrLinksV1){
+    state.edges = state.edges.filter(e => !(e.from === 'durrmukhtar' && e.type === 'footnote' &&
+      e.to === 'tahtawifootnote') &&
+      !(e.from === 'durrmukhtar' && e.to === 'sharhminhatghaffar'));
+    state._durrLinksV1 = true;
+    changed = true;
+  }
+
+  // Radd al-Muḥtār is a footnote after all; the old "Ḥāshiyat al-Ḥalabī" (d. 956H) can't be a
+  // footnote on a book written in 1088H, so it is no longer linked; Ṭawāliʿ al-Anwār's year
+  // follows the design page.
+  if(!state._durrLinksV2){
+    state.edges = state.edges.filter(e => !(e.from === 'durrmukhtar' && e.to === 'ibnabidin' && e.type === 'commentary') &&
+      !(e.from === 'durrmukhtar' && e.to === 'halabi'));
+    const tawali = state.nodes.find(x => x.id === 'tawaliuanwar');
+    if(tawali) tawali.author = 'محمد عابد السندي (d. 1257H)';
+    state._durrLinksV2 = true;
+    changed = true;
+  }
+
+  // Small italic lines under a box on the design page
+  [['sharhminhatghaffar', 'The author\u2019s own commentary'],
+   ['kafi', 'Al-\u1E24\u0101kim\u2019s al-K\u0101f\u012B: a summary of all six books'],
+   ['kafi2', 'Al-Nasaf\u012B\u2019s al-K\u0101f\u012B, not al-\u1E24\u0101kim\u2019s']].forEach(([id, note]) => {
+    const n = state.nodes.find(x => x.id === id);
+    if(n && n.boxNote === undefined){ n.boxNote = note; changed = true; }
+  });
 
   // --- Full book list import: books not yet on the board ---
     addNode({ id:'ikhtilaf', name:'اختلاف أبي حنيفة وابن أبي ليلى\nIkhtilāf Abī Ḥanīfa wa Ibn Abī Laylā', x:80, y:505, author:'الإمام أبو يوسف (d. 182H)' });
@@ -3912,7 +3974,7 @@ function buildTree(){
   combResults.forEach(id => { rel[id] = 'comb'; delete parent[id]; });
 
   const year = id => {
-    const m = (byId[id].author || '').match(/\(d\.\s*(\d+)\s*H\)/);
+    const m = (byId[id].author || '').match(/\(d\.\s*(\d+)\s*A?H\)/);
     return m ? parseInt(m[1], 10) : Infinity;
   };
   const children = {};
@@ -4344,7 +4406,8 @@ function render(){
     div.innerHTML =
       (REL_LABELS[rel] ? `<span class="hb-rel">${REL_LABELS[rel]}</span>` : '') +
       `<span class="hb-in"><span class="hb-t">${lines[0]}</span>` +
-      `<span class="hb-a" dir="auto">${author || lines[1] || ''}</span></span>`;
+      `<span class="hb-a" dir="auto">${author || lines[1] || ''}</span>` +
+      (n.boxNote ? `<span class="hb-note">${n.boxNote}</span>` : '') + '</span>';
 
     if(isAdmin) div.onmousedown = (ev) => { startDrag(n.id, ev); };
     div.onclick = (ev) => { onNodeClick(n.id, ev); };
