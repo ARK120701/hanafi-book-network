@@ -3,16 +3,19 @@
 <head>
 <meta charset="UTF-8">
 <title>Hanafi Book Network</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="design/hanafi-design.css">
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cairo:wght@400;600;700&display=swap');
 
   :root{
     --parchment:#f3ead9;
     --parchment-deep:#e9dcc2;
-    --ink:#2b2320;
+    --site-ink:#2b2320;
     --maroon:#7a2e2e;
     --gold:#a6763f;
-    --line:#8a7355;
+    --site-line:#8a7355;
   }
 
   *{box-sizing:border-box;}
@@ -23,7 +26,7 @@
     min-height:100vh;
     background:var(--parchment);
     font-family:'Cairo', sans-serif;
-    color:var(--ink);
+    color:var(--site-ink);
   }
 
   #toolbar{
@@ -33,7 +36,7 @@
     align-items:center;
     padding:14px 18px;
     background:var(--parchment-deep);
-    border-bottom:1.5px solid var(--line);
+    border-bottom:1.5px solid var(--site-line);
     position:sticky;
     top:0;
     z-index:20;
@@ -43,10 +46,10 @@
     font-family:'Amiri', serif;
     font-size:15px;
     padding:8px 12px;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:5px;
     background:#fffaf0;
-    color:var(--ink);
+    color:var(--site-ink);
     min-width:220px;
   }
 
@@ -83,7 +86,7 @@
     font-size:13px;
     color:#6b5d4f;
     background:#fffaf0;
-    border-bottom:1px solid var(--line);
+    border-bottom:1px solid var(--site-line);
     min-height:18px;
   }
 
@@ -168,39 +171,33 @@
     margin-top:2px;
   }
 
+  /* Book boxes: look comes from design/hanafi-design.css (.hb-box). .node only keeps the
+     board behaviour -- cursor, stacking, dimming, highlight rings. */
   .node{
     position:absolute;
-    font-family:'Amiri', serif;
-    font-weight:700;
-    font-size:16px;
-    background:linear-gradient(180deg,#fffaf0,var(--parchment-deep));
-    border:1.5px solid var(--line);
-    border-radius:6px;
-    padding:10px 18px;
-    text-align:center;
-    box-shadow:0 2px 6px rgba(43,35,32,0.12);
     cursor:pointer;
     user-select:none;
-    white-space:nowrap;
     z-index:5;
     opacity:1;
     transition:opacity 0.15s ease;
   }
+  .node.hb-box{ overflow:visible; white-space:normal; }
+  .node.virtual{ cursor:default; }
+  .hb-box--base{ --c:var(--root); --tint:#E9EBED; }
+  .node.hb-box .hb-rel{ border-radius:5px 5px 0 0; }
+  .node.hb-box .hb-in{ border-radius:0 0 5px 5px; }
   body.admin .node{ cursor:grab; }
   .node.selected{
-    border-color:var(--maroon);
-    box-shadow:0 0 0 3px rgba(122,46,46,0.25);
+    box-shadow:0 0 0 3px rgba(30,40,48,0.28);
   }
   .node.viewed{
-    box-shadow:0 0 0 3px rgba(122,46,46,0.35);
+    box-shadow:0 0 0 4px rgba(30,40,48,0.4);
   }
   .node.multiselect{
-    border-color:var(--gold);
-    box-shadow:0 0 0 3px rgba(166,118,63,0.3);
+    box-shadow:0 0 0 3px rgba(149,103,10,0.45);
   }
   .node.connected{
-    border-color:var(--gold);
-    box-shadow:0 0 0 3px rgba(166,118,63,0.45);
+    box-shadow:0 0 0 3px rgba(30,40,48,0.28);
   }
   .node.dimmed{
     opacity:0.28;
@@ -215,15 +212,17 @@
     justify-content:center;
     font-size:13px;
     font-weight:700;
-    color:#8a7355;
-    background:#fffaf0;
-    border:1.5px solid #8a7355;
+    font-family:var(--font-en);
+    color:var(--comb);
+    background:var(--comb-tint);
+    border:2px solid var(--comb);
   }
   .node.manuscript{
-    border-color:#a31d1d;
-    background:linear-gradient(180deg,#fff1ef,#fad4d0);
-    box-shadow:0 0 0 2px rgba(163,29,29,0.22);
+    box-shadow:0 0 0 2px rgba(163,29,29,0.45);
   }
+  .node.manuscript .hb-in{ background:#fbeceb; }
+  /* A book's color now comes from its relationship (see bookRel), not a per-book color */
+  .node .color-toggle, .node .color-text-toggle{ display:none !important; }
   .node .ms-toggle{
     position:absolute;
     top:-9px; left:-9px;
@@ -248,7 +247,7 @@
     width:18px; height:18px;
     border-radius:50%;
     border:1.5px solid #fff8ee;
-    box-shadow:0 0 0 1px var(--line);
+    box-shadow:0 0 0 1px var(--site-line);
     cursor:pointer;
     display:none;
   }
@@ -260,8 +259,8 @@
     width:20px; height:20px;
     border-radius:50%;
     background:#fffaf0;
-    border:1.5px solid var(--line);
-    color:var(--ink);
+    border:1.5px solid var(--site-line);
+    color:var(--site-ink);
     font-size:11px;
     font-weight:700;
     line-height:17px;
@@ -289,7 +288,7 @@
     position:fixed;
     display:none;
     background:#fffaf0;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:8px;
     box-shadow:0 6px 18px rgba(43,35,32,0.25);
     padding:8px;
@@ -302,8 +301,8 @@
     margin-bottom:6px;
     text-align:right;
     background:transparent;
-    color:var(--ink);
-    border:1px solid var(--line);
+    color:var(--site-ink);
+    border:1px solid var(--site-line);
   }
   #menu button:last-child{margin-bottom:0;}
 
@@ -352,7 +351,7 @@
   }
   .popup{
     background:#fffaf0;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:8px;
     box-shadow:0 6px 18px rgba(43,35,32,0.25);
     padding:14px 16px;
@@ -365,8 +364,8 @@
     padding:0;
     border-radius:50%;
     background:transparent;
-    color:var(--ink);
-    border:1px solid var(--line);
+    color:var(--site-ink);
+    border:1px solid var(--site-line);
     font-size:13px;
     line-height:1;
   }
@@ -391,17 +390,17 @@
     font-family:'Cairo', sans-serif;
     font-size:13px;
     padding:8px 10px;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:5px;
     background:#fff;
-    color:var(--ink);
+    color:var(--site-ink);
     resize:vertical;
     box-sizing:border-box;
   }
   .notes-readonly{
     font-size:13.5px;
     line-height:1.5;
-    color:var(--ink);
+    color:var(--site-ink);
     white-space:pre-wrap;
   }
   .popup-save{
@@ -474,10 +473,10 @@
     font-family:'Cairo', sans-serif;
     font-size:12.5px;
     padding:5px 6px;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:5px;
     background:#fffaf0;
-    color:var(--ink);
+    color:var(--site-ink);
     width:100%;
   }
   .popup-conn-add-row{
@@ -487,8 +486,8 @@
   .popup-conn-direction{
     font-size:12px;
     background:transparent;
-    color:var(--ink);
-    border:1.5px solid var(--line);
+    color:var(--site-ink);
+    border:1.5px solid var(--site-line);
     padding:5px 8px;
     text-align:center;
     white-space:nowrap;
@@ -516,7 +515,7 @@
   .mini-diagram .mini-node rect{
     fill:linear-gradient(180deg,#fffaf0,var(--parchment-deep));
     fill:var(--parchment-deep);
-    stroke:var(--line);
+    stroke:var(--site-line);
     stroke-width:1.2;
     transition:filter 0.15s ease;
   }
@@ -529,7 +528,7 @@
   .mini-diagram .mini-label{
     font-family:'Cairo', sans-serif;
     font-size:9.5px;
-    fill:var(--ink);
+    fill:var(--site-ink);
     pointer-events:none;
   }
   .mini-diagram-empty{
@@ -581,7 +580,7 @@
   }
   .export-box{
     background:#fffaf0;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:8px;
     box-shadow:0 10px 30px rgba(43,35,32,0.3);
     padding:20px;
@@ -598,10 +597,10 @@
     font-family:monospace;
     font-size:12px;
     padding:10px;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:5px;
     background:#fff;
-    color:var(--ink);
+    color:var(--site-ink);
   }
   .export-btn-row{
     display:flex;
@@ -614,10 +613,10 @@
     font-family:'Amiri', serif;
     font-size:14px;
     padding:7px 10px;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:5px;
     background:#fffaf0;
-    color:var(--ink);
+    color:var(--site-ink);
     width:210px;
   }
   .search-results{
@@ -626,7 +625,7 @@
     left:0;
     margin-top:4px;
     background:#fffaf0;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:6px;
     box-shadow:0 6px 18px rgba(43,35,32,0.25);
     min-width:260px;
@@ -678,7 +677,7 @@
     max-width:640px;
     width:100%;
     background:#fffaf0;
-    border:1.5px solid var(--line);
+    border:1.5px solid var(--site-line);
     border-radius:10px;
     box-shadow:0 12px 32px rgba(43,35,32,0.18);
     padding:36px 40px;
@@ -717,7 +716,7 @@
     font-size:13.5px;
     font-style:italic;
     color:#6b5d4f;
-    border-inline-start:3px solid var(--line);
+    border-inline-start:3px solid var(--site-line);
     padding-inline-start:12px;
   }
   #landing-card .contact-note{
@@ -762,10 +761,10 @@
       </p>
       <h2>How it works</h2>
       <ul>
-        <li>Books are arranged in rows by century, oldest at the top.</li>
+        <li>Each base text sits at the top of its own tree, with the commentaries, footnotes, summaries and takhrīj works written on it beneath it. Books with no known connections are gathered in a grid at the bottom.</li>
         <li>Click any book to see notes about it and its author, and to highlight its connections.</li>
-        <li>Lines show how books relate: commentary (arrowed), footnote (dashed), summary (dotted), takreej (diamond), and combined works (star-studded).</li>
-        <li>Line color matches the book the relationship comes from.</li>
+        <li>Each box is colored and labelled by how it relates to its source: commentary, footnote, summary, takhrīj, or combined work (★). Base texts have a thick dark border and no label.</li>
+        <li>Grey lines connect each book to the work it comes from; a dotted violet arrow means “combined into”.</li>
         <li>The diagram opens centered; the board extends beyond the visible screen, so scroll in all directions to view it in its entirety.</li>
         <li>Use Ctrl/Cmd + scroll to zoom, and drag to pan around the board.</li>
         <li>Search for a book by name using the search box once you're on the board.</li>
@@ -811,14 +810,15 @@
       <button class="secondary" onclick="zoomReset()">Reset zoom</button>
     </div>
 
-    <div class="legend">
-      <div class="legend-item">➤➤➤ Commentary — arrows</div>
-      <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dashed;"></span> Footnote — dashed</div>
-      <div class="legend-item"><span class="swatch" style="border-top-color:#8a7355;border-top-style:dotted;border-top-width:4px;"></span> Summary — dotted</div>
-      <div class="legend-item">✦✦✦ Combined into</div>
-      <div class="legend-item">◆◆◆ Takreej — hadith verification</div>
+    <div class="legend hb-legend">
+      <div class="legend-item" data-rel="com"><span class="hb-sw"></span>Commentary</div>
+      <div class="legend-item" data-rel="foot"><span class="hb-sw"></span>Footnote</div>
+      <div class="legend-item" data-rel="abr"><span class="hb-sw"></span>Summary</div>
+      <div class="legend-item" data-rel="takh"><span class="hb-sw"></span>Takhrīj</div>
+      <div class="legend-item" data-rel="comb"><span class="hb-sw"></span>★ Combined work</div>
       <div class="legend-item"><span style="width:14px;height:14px;border-radius:50%;background:#a31d1d;display:inline-block;"></span> Manuscript (مخطوط)</div>
-      <div class="legend-item" style="font-style:italic;">Line color = the book it comes from</div>
+      <div class="legend-item" style="font-style:italic;">Box color = how a book relates to its source</div>
+    </div>
     </div>
 
     <div class="admin-only" style="display:flex;align-items:center;gap:8px;">
@@ -914,6 +914,7 @@ function setNotesLang(lang){
   render();
 }
 let zoom = 1;
+let canvasW = 9450, canvasH = 7050;
 const ZOOM_MIN = 0.3, ZOOM_MAX = 2.5, ZOOM_STEP = 0.1;
 const STORAGE_KEY = 'hanafi-book-network';
 
@@ -2410,6 +2411,12 @@ const BOARD_X_OFFSET = 1000;
 const CENTURY_HEIGHT = 450;
 const CENTURY_START_Y = 40;
 const NUM_CENTURIES = 16;
+// Century bands/labels are hidden while the board is grouped into clusters; set to true to
+// bring them back (they only make sense with a century-row layout).
+const SHOW_CENTURY_BANDS = false;
+// Row height used by the edge router to decide which edges are "long" (span 2+ rows) and get
+// trunk routing. Matches the layer spacing inside a cluster.
+const ROUTE_ROW_H = 260;
 const ROW_BOUNDARIES = [];
 for(let __k = 0; __k <= NUM_CENTURIES; __k++) ROW_BOUNDARIES.push(CENTURY_START_Y + __k * CENTURY_HEIGHT);
 const ARABIC_ORDINALS =['الأول','الثاني','الثالث','الرابع','الخامس','السادس','السابع','الثامن','التاسع','العاشر','الحادي عشر','الثاني عشر','الثالث عشر','الرابع عشر','الخامس عشر','السادس عشر'];
@@ -2420,6 +2427,7 @@ function buildTimeline(){
   const bg = document.getElementById('centuryBg');
   el.innerHTML = '';
   bg.innerHTML = '';
+  if(!SHOW_CENTURY_BANDS) return;
   for(let i=0;i<NUM_CENTURIES;i++){
     const y = CENTURY_START_Y + i * CENTURY_HEIGHT;
 
@@ -2474,12 +2482,26 @@ function nextColor(){
   return hslToHex(hue, sat, light);
 }
 
+// Sizes the canvas (and the layers stacked on it) to the clusters' extents plus breathing room.
+function fitCanvasToContent(){
+  let maxX = 0, maxY = 0;
+  state.nodes.forEach(n => { maxX = Math.max(maxX, n.x + 450); maxY = Math.max(maxY, n.y + 250); });
+  canvasW = Math.max(3000, maxX + 1000);
+  canvasH = Math.max(2000, maxY + 400);
+  ['canvas', 'lines', 'centuryBg', 'timeline'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.width = canvasW + 'px';
+    el.style.height = canvasH + 'px';
+  });
+}
+
 function applyZoom(){
   const canvas = document.getElementById('canvas');
   const sizer = document.getElementById('zoom-sizer');
   canvas.style.transform = `scale(${zoom})`;
-  sizer.style.width = (9450 * zoom) + 'px';
-  sizer.style.height = (7050 * zoom) + 'px';
+  fitCanvasToContent();
+  sizer.style.width = (canvasW * zoom) + 'px';
+  sizer.style.height = (canvasH * zoom) + 'px';
   document.getElementById('zoomLabel').textContent = Math.round(zoom * 100) + '%';
 }
 
@@ -3752,7 +3774,7 @@ function routeEdgeTrunk(a, b, ay, by, acx, bcx, nodeBoxes, usedSegments, lanes){
 // most commentary/summary chains, since they connect books centuries apart -- are routed
 // through the dedicated trunk lanes instead, so they never sweep through intervening rows.
 function routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, lanes){
-  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
+  const rowOf = y => Math.round(y / ROUTE_ROW_H);
   const spanRows = Math.abs(rowOf(a.y) - rowOf(b.y));
   const spanX = Math.abs(acxDefault - bcxDefault);
   // A same-row edge between two far-apart books has the same problem as a multi-row one --
@@ -3801,6 +3823,353 @@ function computeHighlight(id){
   return { nodeIds, throughIds, edgeIds };
 }
 
+// ---------------------------------------------------------------------------------------
+// Tree layout (replicates design/Hanafi-Fiqh-Books_Page-10_All-Diagrams.pdf)
+//
+// The board is no longer positioned by hand or by century. Every render derives a tree from
+// the connections (buildTree), measures each box in the DOM, lays the trees out the way the
+// design page does (layoutBoard) and draws bus/rail connectors (drawTreeLines).
+// ---------------------------------------------------------------------------------------
+const REL_LABELS = { com:'Commentary', foot:'Footnote', abr:'Summary', takh:'Takhrīj', comb:'★ Combined work' };
+const REL_OF_TYPE = { commentary:'com', summary:'abr', footnote:'foot', takreej:'takh' };
+const REL_PRIORITY = { com:0, abr:1, foot:2, takh:3 };
+const VIRTUAL_ROOT = '__zahir';
+// Edges stored in the opposite direction to how the design page reads them (Kanz is the summary
+// of al-Wāfī, but the data points Kanz -> al-Wāfī). [from, to] pairs, swapped when building the tree.
+const REVERSED_EDGES = [['kanz', 'waafi']];
+// Child order under the shared "Ẓāhir al-Riwāyah" root (the design page's order).
+const VIRTUAL_CHILD_ORDER = ['mabsut', 'jamikab', 'ziyadat', 'siyarsagh', 'siyarkab', 'kafi', 'jamisagh'];
+// Where each top-level tree sits on the design page: rows, left to right.
+const BOARD_ROW_1 = ['__zahir', 'bidaya', 'qudoori', ['nasafimz', 'majmabahrain']];
+const BOARD_ROW_2 = ['waafi', 'multaqaabhur', 'wiqriwaya', 'mukhtaar', 'tanwirabsar'];
+const BOARD_ROW_3 = ['mukhtasartahawi', 'tuhfatmuluk', 'nuridah'];
+
+const BOX_GAP = { indent:24, col:22, level:44, stack:9, tree:110, row:150, rail:10, railIn:16, maxStack:5 };
+
+// A book's connections as a tree. Returns:
+//   children[id]  ordered child ids        parent[id]  tree parent id
+//   rel[id]       'com'|'foot'|'abr'|'takh'|'comb'|'root'|'base'|undefined (no connections)
+//   edgeIds[id]   state edge ids that the connector into this book stands for
+//   roots         top-level tree roots     isolated    books with no connections at all
+function buildTree(){
+  const books = state.nodes.filter(n => n.type !== 'combine');
+  const byId = {};
+  books.forEach(n => { byId[n.id] = n; });
+
+  const tedges = [];
+  state.edges.forEach(e => {
+    if(e.type === 'merge' || !byId[e.from] || !byId[e.to]) return;
+    let from = e.from, to = e.to;
+    if(REVERSED_EDGES.some(r => r[0] === from && r[1] === to)){ from = e.to; to = e.from; }
+    tedges.push({ from, to, type:e.type, id:e.id });
+  });
+  const incoming = {};
+  tedges.forEach(te => { (incoming[te.to] = incoming[te.to] || []).push(te); });
+
+  const parent = {}, rel = {}, edgeIds = {};
+  let virtualKids = null;
+  Object.keys(incoming).forEach(id => {
+    const inc = incoming[id];
+    if(inc.length < 2 || virtualKids) return;
+    // Several base texts all summarized by one book (the six Shaybānī works -> al-Kāfī) hang
+    // off one shared root on the design page.
+    if(inc.every(te => !incoming[te.from])){
+      virtualKids = inc.map(te => te.from);
+      virtualKids.forEach(k => { parent[k] = VIRTUAL_ROOT; rel[k] = 'base'; edgeIds[k] = []; });
+      parent[id] = VIRTUAL_ROOT; rel[id] = 'abr'; edgeIds[id] = inc.map(te => te.id);
+      virtualKids.push(id);
+    }
+  });
+  tedges.forEach(te => {
+    if(parent[te.to] !== undefined) return;
+    parent[te.to] = te.from;
+    rel[te.to] = REL_OF_TYPE[te.type] || 'com';
+    edgeIds[te.to] = [te.id];
+  });
+
+  const combResults = new Set(), hasEdge = new Set();
+  state.edges.forEach(e => {
+    const a = state.nodes.find(n => n.id === e.from), b = state.nodes.find(n => n.id === e.to);
+    [a, b].forEach(n => { if(n && n.type !== 'combine') hasEdge.add(n.id); });
+    if(e.type === 'merge' && b && b.type !== 'combine') combResults.add(b.id);
+  });
+  combResults.forEach(id => { rel[id] = 'comb'; delete parent[id]; });
+
+  const year = id => {
+    const m = (byId[id].author || '').match(/\(d\.\s*(\d+)\s*H\)/);
+    return m ? parseInt(m[1], 10) : Infinity;
+  };
+  const children = {};
+  books.forEach(n => { if(parent[n.id] !== undefined) (children[parent[n.id]] = children[parent[n.id]] || []).push(n.id); });
+  const order = {};
+  tedges.forEach((te, i) => { if(order[te.to] === undefined) order[te.to] = i; });
+  Object.keys(children).forEach(pid => {
+    if(pid === VIRTUAL_ROOT){
+      const rank = id => { const i = VIRTUAL_CHILD_ORDER.indexOf(id); return i < 0 ? 99 : i; };
+      children[pid].sort((a, b) => rank(a) - rank(b));
+      return;
+    }
+    // commentaries first, then summary / footnote / takhrīj; oldest author first within each
+    children[pid].sort((a, b) => (REL_PRIORITY[rel[a]] - REL_PRIORITY[rel[b]]) ||
+      (year(a) === year(b) ? 0 : year(a) < year(b) ? -1 : 1) || (order[a] - order[b]));
+  });
+
+  const roots = [], isolated = [];
+  books.forEach(n => {
+    if(parent[n.id] !== undefined) return;
+    if(!hasEdge.has(n.id)){ isolated.push(n.id); return; }
+    roots.push(n.id);
+    if(!rel[n.id]) rel[n.id] = 'root';
+  });
+  return { children, parent, rel, edgeIds, roots, isolated, hasVirtual: !!virtualKids };
+}
+
+let treeInfo = { children:{}, parent:{}, rel:{}, edgeIds:{}, roots:[], isolated:[], hasVirtual:false };
+function bookRel(id){ return treeInfo.rel[id] || null; }
+
+// Positions every book (writes node.x / node.y) and collects the connector segments.
+// elMap must hold every box's DOM element, already in the page so it can be measured.
+function layoutBoard(tree, elMap){
+  const G = BOX_GAP;
+  const size = id => ({ w: elMap[id].offsetWidth, h: elMap[id].offsetHeight });
+  const kids = id => tree.children[id] || [];
+  const eids = id => tree.edgeIds[id] || [];
+  const slotMemo = {};
+  const slots = id => slotMemo[id] || (slotMemo[id] = 1 + kids(id).reduce((a, k) => a + slots(k), 0));
+
+  // A block is a laid-out tree in its own coordinates: anchor x = 0 is the root box's center
+  // line, y = 0 its top. items = box positions (left/top), segs = connector lines.
+  const mk = () => ({ items:[], segs:[], minX:0, maxX:0, h:0 });
+  const grow = (b, l, t, w, h) => { b.minX = Math.min(b.minX, l); b.maxX = Math.max(b.maxX, l + w); b.h = Math.max(b.h, t + h); };
+  const shift = (b, dx, dy) => {
+    b.items.forEach(i => { i.x += dx; i.y += dy; });
+    b.segs.forEach(s => { s.x1 += dx; s.x2 += dx; s.y1 += dy; s.y2 += dy; });
+    b.minX += dx; b.maxX += dx; b.h += dy;
+  };
+  const absorb = (into, b) => {
+    into.items.push(...b.items); into.segs.push(...b.segs);
+    into.minX = Math.min(into.minX, b.minX); into.maxX = Math.max(into.maxX, b.maxX); into.h = Math.max(into.h, b.h);
+  };
+  const seg = (b, x1, y1, x2, y2, e) => b.segs.push({ x1, y1, x2, y2, e });
+
+  // Children stacked under their parent box: a rail down the parent's left side with a tick to
+  // each child; a child's own children nest one indent further in.
+  function stackMember(id, left, top, out){
+    const s = size(id);
+    out.items.push({ id, x:left, y:top });
+    grow(out, left, top, s.w, s.h);
+    let bottom = top + s.h;
+    if(kids(id).length) bottom = stackChildren(id, left, top, s, out);
+    return bottom;
+  }
+  function stackChildren(pid, pLeft, pTop, ps, out){
+    const rx = pLeft + G.railIn, cl = pLeft + G.indent;
+    let y = pTop + ps.h + G.stack, prevY = pTop + ps.h;
+    kids(pid).forEach(k => {
+      const s = size(k);
+      const tick = y + Math.min(s.h / 2, 24);
+      seg(out, rx, prevY, rx, tick, eids(k));
+      seg(out, rx, tick, cl, tick, eids(k));
+      prevY = tick;
+      y = stackMember(k, cl, y, out) + G.stack;
+    });
+    return y - G.stack;
+  }
+
+  // A run of leaf books side by side in one column (railed when there are several).
+  function leafColumn(run){
+    if(run.length === 1) return { block:layoutNode(run[0]), dropX:0, first:run[0] };
+    const b = mk();
+    let y = 0, prevY = 0;
+    run.forEach(k => {
+      const s = size(k);
+      const tick = y + Math.min(s.h / 2, 24);
+      seg(b, 0, prevY, 0, tick, eids(k));
+      seg(b, 0, tick, G.rail, tick, eids(k));
+      prevY = tick;
+      b.items.push({ id:k, x:G.rail, y });
+      grow(b, 0, y, G.rail + s.w, s.h);
+      y += s.h + G.stack;
+    });
+    return { block:b, dropX:0, first:run[0] };
+  }
+
+  function layoutNode(id){
+    const s = size(id), ks = kids(id), b = mk();
+    b.items.push({ id, x:-s.w / 2, y:0 });
+    grow(b, -s.w / 2, 0, s.w, s.h);
+    if(!ks.length) return b;
+
+    // one child under a combined work: straight line down
+    if(tree.rel[id] === 'comb' && ks.length === 1){
+      const c = layoutNode(ks[0]);
+      shift(c, 0, s.h + G.level);
+      seg(b, 0, s.h, 0, s.h + G.level, eids(ks[0]));
+      absorb(b, c);
+      return b;
+    }
+    // a handful of descendants: one railed stack straight under the parent
+    if(ks.reduce((a, k) => a + slots(k), 0) <= G.maxStack){
+      const bottom = stackChildren(id, -s.w / 2, 0, s, b);
+      b.h = Math.max(b.h, bottom);
+      return b;
+    }
+    // otherwise a bus with columns: leaf runs (up to 5, commentary kept apart from the other
+    // relationships) share a column, any book with descendants gets a column of its own
+    const cols = [];
+    let run = [], runClass = null;
+    const flush = () => { if(run.length) cols.push(leafColumn(run)); run = []; runClass = null; };
+    ks.forEach(k => {
+      if(kids(k).length){ flush(); cols.push({ block:layoutNode(k), dropX:0, first:k }); return; }
+      const cl = tree.rel[k] === 'com' ? 'c' : 'o';
+      if(run.length && (cl !== runClass || run.length >= G.maxStack)) flush();
+      run.push(k); runClass = cl;
+    });
+    flush();
+
+    let cursor = 0;
+    cols.forEach(c => {
+      const dx = cursor - c.block.minX;
+      shift(c.block, dx, 0);
+      c.dropX += dx;
+      cursor += (c.block.maxX - c.block.minX) + G.col;
+    });
+    const lo = Math.min(...cols.map(c => c.block.minX)), hi = Math.max(...cols.map(c => c.block.maxX));
+    const mid = (lo + hi) / 2;
+    const busY = s.h + G.level / 2, colTop = s.h + G.level;
+    cols.forEach(c => { shift(c.block, -mid, colTop); c.dropX -= mid; });
+
+    const allE = [].concat(...cols.map(c => eids(c.first)));
+    seg(b, 0, s.h, 0, busY, allE);
+    const xs = [0, ...cols.map(c => c.dropX)].sort((p, q) => p - q);
+    for(let i = 0; i < xs.length - 1; i++){
+      if(xs[i] === xs[i + 1]) continue;
+      const side = xs[i + 1] <= 0
+        ? cols.filter(c => c.dropX <= xs[i])
+        : cols.filter(c => c.dropX >= xs[i + 1]);
+      seg(b, xs[i], busY, xs[i + 1], busY, [].concat(...side.map(c => eids(c.first))));
+    }
+    cols.forEach(c => {
+      seg(b, c.dropX, busY, c.dropX, colTop, eids(c.first));
+      absorb(b, c.block);
+    });
+    return b;
+  }
+
+  // ---- place the top-level trees the way the design page does ----
+  const placed = [];          // { block, ax, ay }
+  const blockOf = {};
+  const exists = id => id === VIRTUAL_ROOT ? tree.hasVirtual : !!elMap[id];
+  const getBlock = id => blockOf[id] || (blockOf[id] = layoutNode(id));
+  const used = new Set();
+  const LEFT = BOARD_X_OFFSET;
+
+  // row = list of ids (an inner array is a vertical pair: the second sits under the first)
+  const rowItems = row => row.filter(it => Array.isArray(it) ? it.every(exists) : exists(it));
+  function placeRow(row, top, extraY){
+    let cursor = LEFT, bottom = top;
+    row.forEach(it => {
+      const ids = Array.isArray(it) ? it : [it];
+      ids.forEach(i => used.add(i));
+      const first = getBlock(ids[0]);
+      let w = first.maxX - first.minX;
+      const yOff = (extraY && extraY[ids[0]]) || 0;
+      const ax = cursor - first.minX;
+      placed.push({ block:first, ax, ay:top + yOff });
+      bottom = Math.max(bottom, top + yOff + first.h);
+      if(ids[1]){
+        const second = getBlock(ids[1]);
+        const sy = top + yOff + first.h + 90;
+        placed.push({ block:second, ax:ax, ay:sy });
+        w = Math.max(w, second.maxX - second.minX);
+        bottom = Math.max(bottom, sy + second.h);
+        placed[placed.length - 1].ax = ax;
+      }
+      cursor += w + G.tree;
+    });
+    return { bottom, right:cursor };
+  }
+
+  const row1 = rowItems(BOARD_ROW_1);
+  const zahirH = tree.hasVirtual ? size(VIRTUAL_ROOT).h : 0;
+  const r1 = placeRow(row1, 40, { bidaya: zahirH + G.level + 90 });
+  const row2Top = r1.bottom + 170;
+  const r2 = placeRow(rowItems(BOARD_ROW_2), row2Top, { mukhtaar: -108 });
+  const rest = tree.roots.filter(id => !used.has(id) && !BOARD_ROW_3.includes(id));
+  const r3 = placeRow(rowItems(BOARD_ROW_3.concat(rest)), r2.bottom + G.row);
+
+  // ---- books with no connections: a plain grid underneath ----
+  const iso = tree.isolated.filter(exists);
+  let bottom = r3.bottom, right = Math.max(r1.right, r2.right, r3.right);
+  const COLS = 6;
+  const isoTop = r3.bottom + G.row;
+  let y = isoTop, rowH = 0;
+  iso.forEach((id, i) => {
+    const s = size(id), col = i % COLS;
+    if(col === 0 && i){ y += rowH + G.stack; rowH = 0; }
+    placed.push({ block:{ items:[{ id, x:0, y:0 }], segs:[], minX:0, maxX:s.w, h:s.h }, ax:LEFT + col * (s.w + G.col), ay:y });
+    rowH = Math.max(rowH, s.h);
+    bottom = Math.max(bottom, y + s.h);
+  });
+
+  // ---- write positions out and gather the segments ----
+  const pos = {};
+  const segs = [];
+  placed.forEach(p => {
+    p.block.items.forEach(i => { pos[i.id] = { x:p.ax + i.x, y:p.ay + i.y }; });
+    p.block.segs.forEach(s => segs.push({ x1:s.x1 + p.ax, y1:s.y1 + p.ay, x2:s.x2 + p.ax, y2:s.y2 + p.ay, e:s.e }));
+  });
+  let maxX = right, maxY = bottom;
+  Object.keys(pos).forEach(id => {
+    const s = size(id);
+    maxX = Math.max(maxX, pos[id].x + s.w);
+    maxY = Math.max(maxY, pos[id].y + s.h);
+  });
+  return { pos, segs, size, maxX, maxY, row2Top };
+}
+
+// "Combined into" arrows: a dotted violet curve from each source book to the combined work.
+function combinedArrows(pos, size, row2Top){
+  const out = [];
+  state.nodes.filter(n => n.type === 'combine').forEach(plus => {
+    const re = state.edges.find(e => e.type === 'merge' && e.from === plus.id);
+    const sources = state.edges.filter(e => e.type === 'merge' && e.to === plus.id);
+    if(!re || !pos[re.to]) return;
+    const t = pos[re.to], ts = size(re.to);
+    const straightAbove = sources.some(se => {
+      const p = pos[se.from]; if(!p) return false;
+      return Math.abs((p.x + size(se.from).w / 2) - (t.x + ts.w / 2)) < 150 && p.y < t.y;
+    });
+    sources.forEach(se => {
+      const p = pos[se.from]; if(!p) return;
+      const ss = size(se.from);
+      const scx = p.x + ss.w / 2, tcx = t.x + ts.w / 2;
+      const ids = [se.id, re.id];
+      let d;
+      if(Math.abs(scx - tcx) < 150 && p.y < t.y){
+        d = `M ${scx} ${p.y + ss.h} L ${tcx} ${t.y}`;
+      } else if(t.y - p.y > 500){
+        // far above (the Qudūrī -> Multaqā link): leave by the side, run down a clear lane and
+        // along the gap between the rows, then drop onto the target
+        const dir = scx < tcx ? 1 : -1;
+        const sx = dir > 0 ? p.x + ss.w : p.x, sy = p.y + ss.h / 2;
+        const lane = sx + dir * 30, corridor = row2Top - 135;
+        d = `M ${sx} ${sy} L ${lane} ${sy} L ${lane} ${corridor} L ${tcx} ${corridor} L ${tcx} ${t.y}`;
+      } else if(straightAbove && p.x + ss.w < t.x){
+        const sx = p.x + ss.w, sy = p.y + ss.h / 2, ex = t.x, ey = t.y + ts.h / 2;
+        d = `M ${sx} ${sy} C ${sx + 80} ${sy} ${ex - 80} ${ey} ${ex} ${ey}`;
+      } else {
+        const dir = scx < tcx ? 1 : -1;
+        const sx = dir > 0 ? p.x + ss.w : p.x, sy = p.y + ss.h / 2;
+        const k = Math.max(60, Math.min(Math.abs(tcx - sx), t.y - sy) * 0.7);
+        d = `M ${sx} ${sy} C ${sx + dir * k} ${sy} ${tcx} ${t.y - k} ${tcx} ${t.y}`;
+      }
+      out.push({ d, ids });
+    });
+  });
+  return out;
+}
+
 function render(){
   updateHint();
   updateModeButtons();
@@ -3809,40 +4178,41 @@ function render(){
   document.querySelectorAll('.node').forEach(n => n.remove());
 
   const HL = computeHighlight(viewedNode);
+  treeInfo = buildTree();
 
   const elMap = {};
   state.nodes.forEach(n => {
+    // "+" combine markers are bookkeeping; the design shows the relation as dotted arrows only
+    if(n.type === 'combine') return;
     const div = document.createElement('div');
-    const isCombine = n.type === 'combine';
     let cls = 'node';
-    if(isCombine) cls += ' combine';
     if(selected === n.id) cls += ' selected';
     if(combineSet.has(n.id)) cls += ' multiselect';
     if(n.manuscript) cls += ' manuscript';
     if(viewedNode === n.id) cls += ' viewed';
     if(HL.nodeIds.has(n.id)) cls += ' connected';
     if(viewedNode && n.id !== viewedNode && !HL.nodeIds.has(n.id) && !HL.throughIds.has(n.id)) cls += ' dimmed';
+    const rel = bookRel(n.id);
+    cls += ' hb-box';
+    if(rel === 'root') cls += ' hb-box--root';
+    if(rel === 'base') cls += ' hb-box--base';
     div.className = cls;
-    div.style.left = n.x + 'px';
-    div.style.top = n.y + 'px';
-    if(!isCombine && n.color && !n.manuscript){
-      div.style.borderColor = n.color;
-      div.style.borderWidth = '2px';
-    }
+    if(rel && rel !== 'root' && rel !== 'base') div.dataset.rel = rel;
 
-    if(isCombine){
-      div.textContent = '+';
-    } else {
-      const lines = n.name.split('\n');
-      div.innerHTML = lines.map((l,i) => `<div style="${i===1 ? 'font-family:Cairo,sans-serif;font-weight:600;font-size:13px;font-style:italic;color:#6b5d4f;margin-top:3px;' : ''}">${l}</div>`).join('');
-    }
+    // Design box: relationship band (if any), Arabic title, then the author.
+    const lines = n.name.split('\n');
+    const author = (n.author || '').replace(/\(d\.\s*(\d+)\s*H\)/, '(d. $1 AH)');
+    div.innerHTML =
+      (REL_LABELS[rel] ? `<span class="hb-rel">${REL_LABELS[rel]}</span>` : '') +
+      `<span class="hb-in"><span class="hb-t">${lines[0]}</span>` +
+      `<span class="hb-a" dir="auto">${author || lines[1] || ''}</span></span>`;
 
     if(isAdmin) div.onmousedown = (ev) => { startDrag(n.id, ev); };
     div.onclick = (ev) => { onNodeClick(n.id, ev); };
     if(isAdmin) div.ondblclick = (ev) => { renameNode(n.id, ev); };
-    div.title = isCombine ? '' : (isAdmin ? ((n.author ? n.author + ' — ' : '') + 'Double-click to rename') : (n.author || ''));
+    div.title = isAdmin ? ((n.author ? n.author + ' — ' : '') + 'Double-click to rename') : (lines[1] || n.author || '');
 
-    if(!isCombine && isAdmin){
+    if(isAdmin){
       const ms = document.createElement('div');
       ms.className = 'ms-toggle';
       ms.textContent = 'MS';
@@ -3874,185 +4244,65 @@ function render(){
     elMap[n.id] = div;
   });
 
-  const svg = document.getElementById('lines');
-  svg.innerHTML = '';
-
-  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
-  svg.appendChild(defs);
-
-  // points is a variable-length polyline (4 points for a local elbow, 6 for a trunk-routed
-  // one) -- subdivide every leg the same way regardless of how many there are.
-  function subdivideElbow(points, segsPerLeg){
-    const pts = [points[0]];
-    for(let i = 0; i < points.length - 1; i++){
-      const from = points[i], to = points[i+1];
-      for(let s = 1; s <= segsPerLeg; s++){
-        const t = s / segsPerLeg;
-        pts.push([ from[0] + (to[0]-from[0])*t, from[1] + (to[1]-from[1])*t ]);
-      }
-    }
-    return pts;
+  // The shared root over the six Shaybānī books (display only; not a book in the data)
+  if(treeInfo.hasVirtual){
+    const v = document.createElement('div');
+    v.className = 'node virtual hb-box hb-box--root';
+    v.innerHTML = '<span class="hb-in"><span class="hb-t">ظاهر الرواية</span>' +
+      '<span class="hb-a" dir="auto">محمد بن الحسن الشيباني (d. 189 AH)</span></span>';
+    canvas.appendChild(v);
+    elMap[VIRTUAL_ROOT] = v;
   }
 
-  // Every node's box, read from the DOM once up front. routeEdge's collision search reads
-  // this hundreds of times per edge -- going through elMap.offsetWidth/offsetHeight that
-  // often forces a browser layout recalculation on nearly every call, which is what made
-  // routing the whole board take seconds; a plain object lookup doesn't.
-  const nodeBoxes = {};
-  state.nodes.forEach(n => { nodeBoxes[n.id] = nodeBoxFor(n, elMap); });
-
-  // Route every edge first, hardest (most century rows spanned, so least room to dodge)
-  // first, so those get first pick of the trunk lanes and the open margin, and easier/local
-  // edges route around whatever's already been placed -- rather than whatever order edges
-  // happen to appear in state.edges. Drawing below still follows that original order (so
-  // z-stacking / admin click targets don't shuffle), just looking up the route computed here.
-  const nodeById = {};
-  state.nodes.forEach(n => { nodeById[n.id] = n; });
-  const rowOf = y => Math.round((y - CENTURY_START_Y) / CENTURY_HEIGHT);
-  const edgeSpan = e => {
-    const a = nodeById[e.from], b = nodeById[e.to];
-    if(!a || !b) return 0;
-    // Row span dominates the ordering; a wide same-row hop (routeEdge's other trunk trigger)
-    // still floats ahead of short local edges via the x-distance term.
-    return Math.abs(rowOf(a.y) - rowOf(b.y)) * 100000 + Math.abs(a.x - b.x);
-  };
-  const routingOrder = state.edges.filter(e => nodeById[e.from] && nodeById[e.to])
-    .slice().sort((e1, e2) => edgeSpan(e2) - edgeSpan(e1));
-
-  const usedSegments = [];
-  const trunkLanes = [];
-  const routeById = {};
-  routingOrder.forEach(e => {
-    const a = nodeById[e.from], b = nodeById[e.to];
-    const aEl = elMap[a.id], bEl = elMap[b.id];
-    const aw = aEl ? aEl.offsetWidth : 120, ah = aEl ? aEl.offsetHeight : 40;
-    const bw = bEl ? bEl.offsetWidth : 120, bh = bEl ? bEl.offsetHeight : 40;
-
-    const acxDefault = a.x + aw/2, bcxDefault = b.x + bw/2;
-    let ay, by;
-    if(b.y >= a.y){
-      ay = a.y + ah;
-      by = b.y;
-    } else {
-      ay = a.y;
-      by = b.y + bh;
-    }
-    const route = routeEdge(a, b, ay, by, acxDefault, bcxDefault, aw, bw, nodeBoxes, usedSegments, trunkLanes);
-    usedSegments.push(...route.segs);
-    routeById[e.id] = route;
+  const lay = layoutBoard(treeInfo, elMap);
+  Object.keys(lay.pos).forEach(id => {
+    const el = elMap[id];
+    el.style.left = lay.pos[id].x + 'px';
+    el.style.top = lay.pos[id].y + 'px';
+    const n = state.nodes.find(x => x.id === id);
+    if(n){ n.x = lay.pos[id].x; n.y = lay.pos[id].y; }
   });
+  canvasW = Math.max(3000, lay.maxX + 1000);
+  canvasH = Math.max(2000, lay.maxY + 400);
+  ['canvas', 'lines', 'centuryBg', 'timeline'].forEach(id => {
+    const el = document.getElementById(id);
+    el.style.width = canvasW + 'px';
+    el.style.height = canvasH + 'px';
+  });
+  const sizer = document.getElementById('zoom-sizer');
+  sizer.style.width = (canvasW * zoom) + 'px';
+  sizer.style.height = (canvasH * zoom) + 'px';
 
-  state.edges.forEach(e => {
-    const a = nodeById[e.from];
-    const b = nodeById[e.to];
-    if(!a || !b) return;
-    const points = routeById[e.id].points;
-    const color = edgeColor(a, b);
-    const style = edgeStyle(e.type);
+  const svg = document.getElementById('lines');
+  svg.innerHTML = '';
+  const defs = document.createElementNS('http://www.w3.org/2000/svg', 'defs');
+  defs.innerHTML = '<marker id="hb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6452A0"/></marker>';
+  svg.appendChild(defs);
 
-    const isHL = !!viewedNode && HL.edgeIds.has(e.id);
-    const dimmed = !!viewedNode && !isHL;
-    const widthMul = isHL ? 1.7 : 1;
+  // Design lines: plain grey 2px bus/rail connectors (.hb-line); the relationship is shown by
+  // the box colors. Drawn as three paths -- normal, dimmed and highlighted -- not one per segment.
+  const hit = ids => (ids || []).some(i => HL.edgeIds.has(i));
+  const d = { norm:'', dim:'', hl:'' };
+  lay.segs.forEach(s => {
+    const key = !viewedNode ? 'norm' : hit(s.e) ? 'hl' : 'dim';
+    d[key] += `M${s.x1} ${s.y1}L${s.x2} ${s.y2}`;
+  });
+  const addPath = (dd, cls, extra) => {
+    if(!dd) return;
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('class', cls);
+    p.setAttribute('d', dd);
+    Object.keys(extra || {}).forEach(k => { p.style[k] = extra[k]; });
+    svg.appendChild(p);
+  };
+  addPath(d.norm, 'hb-line');
+  addPath(d.dim, 'hb-line', { opacity:'0.15' });
+  addPath(d.hl, 'hb-line', { stroke:'var(--ink)', strokeWidth:'3.5px' });
 
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', color);
-    path.setAttribute('stroke-linecap', 'round');
-    path.setAttribute('opacity', dimmed ? '0.15' : '1');
-    if(isHL) path.style.filter = 'drop-shadow(0 0 3px rgba(122,46,46,0.6))';
-
-    if(e.type === 'commentary'){
-      const pts = subdivideElbow(points, 5);
-      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
-      path.setAttribute('d', d);
-      path.setAttribute('stroke-width', 1.8 * widthMul);
-
-      const markerId = 'arrow-' + e.id;
-      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      marker.setAttribute('id', markerId);
-      marker.setAttribute('viewBox', '0 0 10 10');
-      marker.setAttribute('refX', '5');
-      marker.setAttribute('refY', '5');
-      marker.setAttribute('markerWidth', '6');
-      marker.setAttribute('markerHeight', '6');
-      marker.setAttribute('orient', 'auto');
-      const arrowShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      arrowShape.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
-      arrowShape.setAttribute('fill', color);
-      marker.appendChild(arrowShape);
-      defs.appendChild(marker);
-
-      path.setAttribute('marker-mid', `url(#${markerId})`);
-      path.setAttribute('marker-end', `url(#${markerId})`);
-    } else if(e.type === 'merge'){
-      const pts = subdivideElbow(points, 14);
-      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
-      path.setAttribute('d', d);
-      path.setAttribute('stroke-width', 1.2 * widthMul);
-
-      const markerId = 'star-' + e.id;
-      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      marker.setAttribute('id', markerId);
-      marker.setAttribute('viewBox', '0 0 10 10');
-      marker.setAttribute('refX', '5');
-      marker.setAttribute('refY', '5');
-      marker.setAttribute('markerWidth', '5.5');
-      marker.setAttribute('markerHeight', '5.5');
-      marker.setAttribute('orient', '0');
-      const starShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      starShape.setAttribute('d', 'M 5,0.5 L 6.06,3.54 L 9.28,3.61 L 6.71,5.56 L 7.65,8.64 L 5,6.8 L 2.36,8.64 L 3.29,5.56 L 0.72,3.61 L 3.94,3.54 Z');
-      starShape.setAttribute('fill', color);
-      marker.appendChild(starShape);
-      defs.appendChild(marker);
-
-      path.setAttribute('marker-mid', `url(#${markerId})`);
-      path.setAttribute('marker-end', `url(#${markerId})`);
-    } else if(e.type === 'takreej'){
-      // Takreej (تخريج, hadith-verification works) gets its own repeating symbol -- a
-      // diamond, distinct from commentary's arrows and merge's stars -- per the legend.
-      const pts = subdivideElbow(points, 10);
-      const d = pts.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
-      path.setAttribute('d', d);
-      path.setAttribute('stroke-width', 1.2 * widthMul);
-
-      const markerId = 'diamond-' + e.id;
-      const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-      marker.setAttribute('id', markerId);
-      marker.setAttribute('viewBox', '0 0 10 10');
-      marker.setAttribute('refX', '5');
-      marker.setAttribute('refY', '5');
-      marker.setAttribute('markerWidth', '5.5');
-      marker.setAttribute('markerHeight', '5.5');
-      marker.setAttribute('orient', '0');
-      const diamondShape = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      diamondShape.setAttribute('d', 'M 5,1 L 9,5 L 5,9 L 1,5 Z');
-      diamondShape.setAttribute('fill', color);
-      marker.appendChild(diamondShape);
-      defs.appendChild(marker);
-
-      path.setAttribute('marker-mid', `url(#${markerId})`);
-      path.setAttribute('marker-end', `url(#${markerId})`);
-    } else {
-      const d = points.map((p,i) => (i===0 ? 'M' : 'L') + ' ' + p[0] + ' ' + p[1]).join(' ');
-      path.setAttribute('d', d);
-      path.setAttribute('stroke-width', style.width * widthMul);
-      if(style.dash !== 'none') path.setAttribute('stroke-dasharray', style.dash);
-    }
-
-    if(isAdmin){
-      path.style.pointerEvents = 'stroke';
-      path.style.cursor = 'pointer';
-      path.onclick = () => {
-        if(confirm('Remove this connection?')){
-          state.edges = state.edges.filter(x => x.id !== e.id);
-          saveState();
-          render();
-        }
-      };
-    } else {
-      path.style.pointerEvents = 'none';
-    }
-    svg.appendChild(path);
+  combinedArrows(lay.pos, lay.size, lay.row2Top).forEach(a => {
+    const isHL = !!viewedNode && hit(a.ids);
+    addPath(a.d, 'hb-combine',
+      !viewedNode ? {} : isHL ? { strokeWidth:'4.5px' } : { opacity:'0.15' });
   });
 
   renderPopups();
@@ -4092,7 +4342,11 @@ function centerInitialView(){
   wrap.scrollTop = Math.max(0, cy * zoom - wrap.clientHeight / 2);
 }
 
-loadState().then(() => { applyZoom(); centerInitialView(); loadPublishedNotes(); });
+loadState().then(() => {
+  buildTimeline(); applyZoom(); centerInitialView(); loadPublishedNotes();
+  // Box heights depend on the web fonts, so lay the board out again once they have loaded.
+  if(document.fonts && document.fonts.ready) document.fonts.ready.then(() => { render(); centerInitialView(); });
+});
 </script>
 
 </body>

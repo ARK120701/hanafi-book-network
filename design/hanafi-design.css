@@ -1,0 +1,86 @@
+/* =====================================================================
+   Hanafi Fiqh Books: diagram design template (CSS)
+   Fonts: add to <head>
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+   Layout constants used by the diagram (px, before any zoom):
+     box width 205 | base-text width 300 | indent 24 | column gap 22
+     level gap 44 | stack gap 9 | tree gap 110 | row gap 120
+   ===================================================================== */
+:root{
+  /* ink + lines */
+  --ink:#1E2830; --muted:#56626A; --line:#7E8A84; --soft:#E7ECE8; --rule:#B9C2BC; --dashed:#8A948E;
+  /* relationship colours (band + border) */
+  --com:#5F7424;   /* Commentary  */
+  --foot:#95670A;  /* Footnote    */
+  --abr:#2D6A8A;   /* Summary     */
+  --takh:#9C3765;  /* Takhrij     */
+  --comb:#6452A0;  /* Combined work */
+  --root:#1E2830;  /* base text   */
+  /* tints = 9% of the colour over white (box background) */
+  --com-tint:#F1F2EB; --foot-tint:#F5F1E9; --abr-tint:#ECF2F4; --takh-tint:#F6EDF1; --comb-tint:#F1EFF6;
+  /* page accents (title, header rule, contents dot) */
+  --page-zahir:#1F5E5B; --page-quduri:#8A3B2E; --page-kanz:#3B4A8C; --page-wiqaya:#7A5C1E;
+  --page-durr:#5B3F6E; --page-combined:#2F5D3A; --page-other:#56646C; --page-all:#1E2830;
+  /* sizes + fonts */
+  --box-w:205px; --root-w:300px;
+  --font-ar:"Amiri",serif;
+  --font-en:"Gentium Book Plus","Gentium Book",Georgia,serif;
+}
+
+/* ---------- the stage: boxes are absolutely positioned, one SVG draws the lines ---------- */
+.hb-stage{position:relative;transform-origin:0 0;font-family:var(--font-en);color:var(--ink)}
+.hb-stage svg{position:absolute;left:0;top:0;overflow:visible}
+
+/* ---------- box ---------- */
+.hb-box{position:absolute;box-sizing:border-box;width:var(--w,var(--box-w));
+  border:2px solid var(--c,var(--root));border-radius:7px;background:var(--tint,#fff);
+  overflow:hidden;direction:ltr;text-align:center;font-family:var(--font-en);color:var(--ink)}
+.hb-box--static{position:relative}                 /* use outside the diagram (legends, galleries) */
+.hb-rel{display:block;background:var(--c);color:#fff;font-size:12.5px;font-weight:700;padding:2px 8px;text-align:left}
+.hb-in{display:block;padding:4px 9px 7px}
+.hb-t{display:block;font-family:var(--font-ar);font-weight:700;font-size:17px;line-height:1.75;direction:rtl}
+.hb-a{display:block;font-size:13.5px;color:var(--muted);line-height:1.35;margin-top:1px}      /* author (d. 861 AH) */
+.hb-note{display:block;font-size:12.5px;font-style:italic;color:var(--muted);margin-top:3px;
+  border-top:1px dashed var(--line);padding-top:2px;line-height:1.6}
+
+/* relationship = data-rel on .hb-box  (sets colour + tint) */
+.hb-box[data-rel="com"] {--c:var(--com); --tint:var(--com-tint)}
+.hb-box[data-rel="foot"]{--c:var(--foot);--tint:var(--foot-tint)}
+.hb-box[data-rel="abr"] {--c:var(--abr); --tint:var(--abr-tint)}
+.hb-box[data-rel="takh"]{--c:var(--takh);--tint:var(--takh-tint)}
+.hb-box[data-rel="comb"]{--c:var(--comb);--tint:var(--comb-tint)}
+
+/* base text: no band, thick dark border, wider */
+.hb-box--root{--w:var(--root-w);border-width:3px;background:#fff}
+.hb-box--root .hb-t{font-size:20px}
+
+/* "shown in full on page N" box */
+.hb-box--ref{border:2px dashed var(--dashed);background:#fff}
+.hb-box--ref .hb-t{color:var(--muted)}
+.hb-box--ref .hb-note{border-top:0;margin-top:0;padding-top:0}
+
+/* ---------- lines (SVG) ---------- */
+.hb-line{stroke:var(--line);stroke-width:2;stroke-linecap:square;fill:none}              /* rails + buses */
+.hb-sep{stroke:var(--rule);stroke-width:2;stroke-dasharray:10 8;fill:none}               /* row separator */
+.hb-combine{stroke:var(--comb);stroke-width:3;stroke-dasharray:2 7;stroke-linecap:round;fill:none;marker-end:url(#hb-arrow)}
+/* put once inside every <svg>:
+   <defs><marker id="hb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+     <path d="M0,0 L10,5 L0,10 z" fill="#6452A0"/></marker></defs> */
+
+/* ---------- page header + legend ---------- */
+.hb-page{--page:var(--ink)}
+.hb-page[data-page="zahir"]{--page:var(--page-zahir)}   .hb-page[data-page="quduri"]{--page:var(--page-quduri)}
+.hb-page[data-page="kanz"]{--page:var(--page-kanz)}     .hb-page[data-page="wiqaya"]{--page:var(--page-wiqaya)}
+.hb-page[data-page="durr"]{--page:var(--page-durr)}     .hb-page[data-page="combined"]{--page:var(--page-combined)}
+.hb-page[data-page="other"]{--page:var(--page-other)}   .hb-page[data-page="all"]{--page:var(--page-all)}
+.hb-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
+  border-bottom:2px solid var(--page);padding-bottom:8px;margin-bottom:10px;font-family:var(--font-en)}
+.hb-head h2{font-size:27px;margin:0;line-height:1.35;font-weight:700;color:var(--page)}
+.hb-sub{font-size:17px;color:var(--muted);margin:2px 0 0;line-height:1.6}
+.hb-legend{display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;margin:0;font-size:14.5px}
+.hb-legend li{display:flex;align-items:center;gap:6px}
+.hb-sw{width:14px;height:14px;border-radius:3px;display:inline-block;background:var(--c)}
+.hb-legend [data-rel="com"]{--c:var(--com)}  .hb-legend [data-rel="foot"]{--c:var(--foot)}
+.hb-legend [data-rel="abr"]{--c:var(--abr)}  .hb-legend [data-rel="takh"]{--c:var(--takh)}
+.hb-legend [data-rel="comb"]{--c:var(--comb)}

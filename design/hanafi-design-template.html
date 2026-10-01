@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hanafi Fiqh Books: design template</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   Hanafi Fiqh Books: diagram design template (CSS)
+   Fonts: add to <head>
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Gentium+Book+Plus:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+   Layout constants used by the diagram (px, before any zoom):
+     box width 205 | base-text width 300 | indent 24 | column gap 22
+     level gap 44 | stack gap 9 | tree gap 110 | row gap 120
+   ===================================================================== */
+:root{
+  /* ink + lines */
+  --ink:#1E2830; --muted:#56626A; --line:#7E8A84; --soft:#E7ECE8; --rule:#B9C2BC; --dashed:#8A948E;
+  /* relationship colours (band + border) */
+  --com:#5F7424;   /* Commentary  */
+  --foot:#95670A;  /* Footnote    */
+  --abr:#2D6A8A;   /* Summary     */
+  --takh:#9C3765;  /* Takhrij     */
+  --comb:#6452A0;  /* Combined work */
+  --root:#1E2830;  /* base text   */
+  /* tints = 9% of the colour over white (box background) */
+  --com-tint:#F1F2EB; --foot-tint:#F5F1E9; --abr-tint:#ECF2F4; --takh-tint:#F6EDF1; --comb-tint:#F1EFF6;
+  /* page accents (title, header rule, contents dot) */
+  --page-zahir:#1F5E5B; --page-quduri:#8A3B2E; --page-kanz:#3B4A8C; --page-wiqaya:#7A5C1E;
+  --page-durr:#5B3F6E; --page-combined:#2F5D3A; --page-other:#56646C; --page-all:#1E2830;
+  /* sizes + fonts */
+  --box-w:205px; --root-w:300px;
+  --font-ar:"Amiri",serif;
+  --font-en:"Gentium Book Plus","Gentium Book",Georgia,serif;
+}
+
+/* ---------- the stage: boxes are absolutely positioned, one SVG draws the lines ---------- */
+.hb-stage{position:relative;transform-origin:0 0;font-family:var(--font-en);color:var(--ink)}
+.hb-stage svg{position:absolute;left:0;top:0;overflow:visible}
+
+/* ---------- box ---------- */
+.hb-box{position:absolute;box-sizing:border-box;width:var(--w,var(--box-w));
+  border:2px solid var(--c,var(--root));border-radius:7px;background:var(--tint,#fff);
+  overflow:hidden;direction:ltr;text-align:center;font-family:var(--font-en);color:var(--ink)}
+.hb-box--static{position:relative}                 /* use outside the diagram (legends, galleries) */
+.hb-rel{display:block;background:var(--c);color:#fff;font-size:12.5px;font-weight:700;padding:2px 8px;text-align:left}
+.hb-in{display:block;padding:4px 9px 7px}
+.hb-t{display:block;font-family:var(--font-ar);font-weight:700;font-size:17px;line-height:1.75;direction:rtl}
+.hb-a{display:block;font-size:13.5px;color:var(--muted);line-height:1.35;margin-top:1px}      /* author (d. 861 AH) */
+.hb-note{display:block;font-size:12.5px;font-style:italic;color:var(--muted);margin-top:3px;
+  border-top:1px dashed var(--line);padding-top:2px;line-height:1.6}
+
+/* relationship = data-rel on .hb-box  (sets colour + tint) */
+.hb-box[data-rel="com"] {--c:var(--com); --tint:var(--com-tint)}
+.hb-box[data-rel="foot"]{--c:var(--foot);--tint:var(--foot-tint)}
+.hb-box[data-rel="abr"] {--c:var(--abr); --tint:var(--abr-tint)}
+.hb-box[data-rel="takh"]{--c:var(--takh);--tint:var(--takh-tint)}
+.hb-box[data-rel="comb"]{--c:var(--comb);--tint:var(--comb-tint)}
+
+/* base text: no band, thick dark border, wider */
+.hb-box--root{--w:var(--root-w);border-width:3px;background:#fff}
+.hb-box--root .hb-t{font-size:20px}
+
+/* "shown in full on page N" box */
+.hb-box--ref{border:2px dashed var(--dashed);background:#fff}
+.hb-box--ref .hb-t{color:var(--muted)}
+.hb-box--ref .hb-note{border-top:0;margin-top:0;padding-top:0}
+
+/* ---------- lines (SVG) ---------- */
+.hb-line{stroke:var(--line);stroke-width:2;stroke-linecap:square;fill:none}              /* rails + buses */
+.hb-sep{stroke:var(--rule);stroke-width:2;stroke-dasharray:10 8;fill:none}               /* row separator */
+.hb-combine{stroke:var(--comb);stroke-width:3;stroke-dasharray:2 7;stroke-linecap:round;fill:none;marker-end:url(#hb-arrow)}
+/* put once inside every <svg>:
+   <defs><marker id="hb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+     <path d="M0,0 L10,5 L0,10 z" fill="#6452A0"/></marker></defs> */
+
+/* ---------- page header + legend ---------- */
+.hb-page{--page:var(--ink)}
+.hb-page[data-page="zahir"]{--page:var(--page-zahir)}   .hb-page[data-page="quduri"]{--page:var(--page-quduri)}
+.hb-page[data-page="kanz"]{--page:var(--page-kanz)}     .hb-page[data-page="wiqaya"]{--page:var(--page-wiqaya)}
+.hb-page[data-page="durr"]{--page:var(--page-durr)}     .hb-page[data-page="combined"]{--page:var(--page-combined)}
+.hb-page[data-page="other"]{--page:var(--page-other)}   .hb-page[data-page="all"]{--page:var(--page-all)}
+.hb-head{display:flex;justify-content:space-between;align-items:flex-end;gap:30px;
+  border-bottom:2px solid var(--page);padding-bottom:8px;margin-bottom:10px;font-family:var(--font-en)}
+.hb-head h2{font-size:27px;margin:0;line-height:1.35;font-weight:700;color:var(--page)}
+.hb-sub{font-size:17px;color:var(--muted);margin:2px 0 0;line-height:1.6}
+.hb-legend{display:flex;flex-wrap:wrap;gap:12px;list-style:none;padding:0;margin:0;font-size:14.5px}
+.hb-legend li{display:flex;align-items:center;gap:6px}
+.hb-sw{width:14px;height:14px;border-radius:3px;display:inline-block;background:var(--c)}
+.hb-legend [data-rel="com"]{--c:var(--com)}  .hb-legend [data-rel="foot"]{--c:var(--foot)}
+.hb-legend [data-rel="abr"]{--c:var(--abr)}  .hb-legend [data-rel="takh"]{--c:var(--takh)}
+.hb-legend [data-rel="comb"]{--c:var(--comb)}
+
+/* ---- demo page only (not part of the template) ---- */
+body{margin:0;background:#fff;font-family:var(--font-en);color:var(--ink)}
+.wrap{max-width:1100px;margin:0 auto;padding:28px 24px 60px}
+.demo h3{font-size:21px;margin:42px 0 10px;border-bottom:1.5px solid var(--line);padding-bottom:4px}
+.demo p.tip{font-size:15px;color:var(--muted);margin:0 0 14px;line-height:1.6}
+.demo code{background:var(--soft);border-radius:4px;padding:1px 6px;font-size:13.5px}
+.swatches{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.swatch{border:1px solid #DDE3DD;border-radius:8px;overflow:hidden;font-size:13.5px}
+.swatch i{display:block;height:44px}
+.swatch b,.swatch span{display:block;padding:2px 8px}.swatch span{color:var(--muted);padding-bottom:6px}
+.gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:22px 18px;align-items:start}
+.gallery figure{margin:0}.gallery figcaption{font-size:13px;color:var(--muted);margin-top:6px;line-height:1.5}
+.gallery .hb-box{margin:0 auto}
+.stagebox{overflow-x:auto;border:1px solid #DDE3DD;border-radius:12px;background:#F1F4F0;padding:18px}
+</style></head>
+<body><div class="wrap demo">
+
+<div class="hb-page" data-page="quduri">
+  <div class="hb-head">
+    <div><h2>Mukhtaṣar al-Qudūrī and al-Hidāyah</h2><p class="hb-sub">Page header: title uses the page accent colour; the rule under it too</p></div>
+    <ul class="hb-legend">
+      <li data-rel="com"><span class="hb-sw"></span>Commentary</li><li data-rel="foot"><span class="hb-sw"></span>Footnote</li>
+      <li data-rel="abr"><span class="hb-sw"></span>Summary</li><li data-rel="takh"><span class="hb-sw"></span>Takhrīj</li>
+      <li data-rel="comb"><span class="hb-sw"></span>★ Combined work</li>
+    </ul>
+  </div>
+</div>
+
+<h3>1. Colours</h3>
+<p class="tip">All values are CSS variables in <code>:root</code>. A relationship colour is used for the box band and border; the matching tint (9 % over white) is the box background.</p>
+<div class="swatches" id="sw"></div>
+
+<h3>2. Box types</h3>
+<p class="tip">Class <code>hb-box</code> + <code>data-rel</code> (com / foot / abr / takh / comb). Base text = <code>hb-box--root</code> (no band). See-page box = <code>hb-box--ref</code>. In the real diagram boxes are <code>position:absolute</code>; <code>hb-box--static</code> is used here only to show them side by side.</p>
+<div class="gallery" id="gal"></div>
+
+<h3>3. Connected sample (rails, buses, indented stack)</h3>
+<p class="tip">Lines are 2 px <code>#7E8A84</code>, straight, square caps. A parent drops to a horizontal <b>bus</b>, which drops to each child column. A column of several books uses a vertical <b>rail</b> on its left with short ticks, and nested books are indented 24 px.</p>
+<div class="stagebox"><div class="hb-stage" id="st1"></div></div>
+
+<h3>4. Combined work (bracket) and “combined into” arrow</h3>
+<p class="tip">Left: on the Combined Works page the sources sit in a row above the new book and are joined by a bracket. Right: on the overview page the same relation is a dotted violet arrow (<code>.hb-combine</code>).</p>
+<div class="stagebox"><div class="hb-stage" id="st2"></div></div>
+
+</div>
+<script>
+const NS="http://www.w3.org/2000/svg";
+const REL={com:"Commentary",foot:"Footnote",abr:"Summary",takh:"Takhrīj",comb:"★ Combined work"};
+/* ---- 1. swatches ---- */
+const SW=[["--ink","Ink / base border","#1E2830"],["--muted","Muted text","#56626A"],["--line","Lines","#7E8A84"],["--com","Commentary","#5F7424"],["--foot","Footnote","#95670A"],["--abr","Summary","#2D6A8A"],["--takh","Takhrīj","#9C3765"],["--comb","Combined work","#6452A0"],["--com-tint","Commentary tint","#F1F2EB"],["--foot-tint","Footnote tint","#F5F1E9"],["--abr-tint","Summary tint","#ECF2F4"],["--takh-tint","Takhrīj tint","#F6EDF1"],["--comb-tint","Combined tint","#F1EFF6"],["--page-zahir","Page: Ẓāhir","#1F5E5B"],["--page-quduri","Page: Qudūrī","#8A3B2E"],["--page-kanz","Page: Kanz","#3B4A8C"],["--page-wiqaya","Page: Wiqāya","#7A5C1E"],["--page-durr","Page: Durr","#5B3F6E"],["--page-combined","Page: Combined","#2F5D3A"],["--page-other","Page: Other","#56646C"]];
+document.getElementById("sw").innerHTML=SW.map(([v,n,h])=>`<div class="swatch"><i style="background:${h}"></i><b>${n}</b><span>${v} · ${h}</span></div>`).join("");
+/* ---- helper: build a box ---- */
+function box(o){const b=document.createElement("div");b.className="hb-box"+(o.root?" hb-box--root":"")+(o.ref?" hb-box--ref":"")+(o.stat?" hb-box--static":"");
+  if(o.rel)b.dataset.rel=o.rel;
+  b.innerHTML=(o.rel?`<span class="hb-rel">${REL[o.rel]}</span>`:"")+`<span class="hb-in"><span class="hb-t">${o.t}</span>`+(o.a?`<span class="hb-a">${o.a}</span>`:"")+(o.note?`<span class="hb-note">${o.note}</span>`:"")+`</span>`;
+  if(o.x!=null){b.style.left=o.x+"px";b.style.top=o.y+"px"}return b}
+/* ---- 2. gallery ---- */
+const G=[
+ {root:1,t:"مُخْتَصَرُ الْقُدُورِيِّ",a:"Abū al-Ḥusayn al-Qudūrī (d. 428 AH)",cap:"Base text · <code>hb-box--root</code> · 300 px, 3 px dark border, no band"},
+ {rel:"com",t:"شَرْحُ الْجَامِعِ الصَّغِيرِ",a:"Fakhr al-Islām al-Bazdawī (d. 482 AH)",cap:"Commentary · <code>data-rel=\"com\"</code> · 205 px"},
+ {rel:"com",t:"مِنَحُ الْغَفَّارِ",a:"Muḥammad al-Timurtāshī (d. 1004 AH)",note:"The author's own commentary",cap:"With a note line (italic, dashed rule)"},
+ {rel:"foot",t:"حَاشِيَةُ الطَّحْطَاوِيِّ عَلَى الدُّرِّ الْمُخْتَارِ",a:"al-Sayyid Aḥmad al-Ṭaḥṭāwī (d. 1231 AH)",cap:"Footnote · <code>data-rel=\"foot\"</code> · long Arabic title wraps"},
+ {rel:"abr",t:"الْكَافِي",a:"al-Ḥākim al-Shahīd (d. 334 AH)",note:"Al-Ḥākim's summary of all six books",cap:"Summary · <code>data-rel=\"abr\"</code>"},
+ {rel:"takh",t:"نَصْبُ الرَّايَةِ",a:"Jamāl al-Dīn al-Zaylaʿī (d. 762 AH)",cap:"Takhrīj · <code>data-rel=\"takh\"</code>"},
+ {rel:"comb",t:"بِدَايَةُ الْمُبْتَدِي",a:"Abū al-Ḥasan al-Marghīnānī (d. 593 AH)",cap:"Combined work · <code>data-rel=\"comb\"</code> · label “★ Combined work”"},
+ {ref:1,t:"مُخْتَصَرُ الْقُدُورِيِّ",note:"Shown in full on page 4",cap:"See-page box · <code>hb-box--ref</code> · dashed, link to the real box"}
+];
+document.getElementById("gal").innerHTML="";
+G.forEach(o=>{const f=document.createElement("figure");f.appendChild(box({...o,stat:1}));const c=document.createElement("figcaption");c.innerHTML=o.cap;f.appendChild(c);document.getElementById("gal").appendChild(f)});
+/* ---- svg helpers ---- */
+function svgFor(stage,w,h){const s=document.createElementNS(NS,"svg");s.setAttribute("width",w);s.setAttribute("height",h);
+  s.innerHTML='<defs><marker id="hb-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#6452A0"/></marker></defs>';stage.prepend(s);return s}
+function ln(s,a,b,c,d){const l=document.createElementNS(NS,"line");l.setAttribute("x1",a);l.setAttribute("y1",b);l.setAttribute("x2",c);l.setAttribute("y2",d);l.setAttribute("class","hb-line");s.appendChild(l)}
+function pth(s,d,cls){const p=document.createElementNS(NS,"path");p.setAttribute("d",d);p.setAttribute("class",cls);s.appendChild(p)}
+/* ---- 3. connected sample ---- */
+(function(){const st=document.getElementById("st1");const W=205,RW=300,IND=24,HG=22,VG=44,SG=9;
+  const mk=(o)=>{const b=box(o);st.appendChild(b);return b};
+  const root=mk({root:1,t:"مُخْتَصَرُ الْقُدُورِيِّ",a:"Abū al-Ḥusayn al-Qudūrī (d. 428 AH)"});
+  const c1=mk({rel:"com",t:"مَجْمَعُ الْأَنْهُرِ",a:"Shaykhī Zādah (d. 1078 AH)"});
+  const c2=mk({rel:"com",t:"الْجَوْهَرَةُ النَّيِّرَةُ",a:"Abū Bakr al-Ḥaddādī (d. 800 AH)"});
+  const c3=mk({rel:"abr",t:"الْوِقَايَةُ",a:"Burhān al-Sharīʿah (d. 673 AH)"});
+  const s1=mk({rel:"foot",t:"حَاشِيَةُ ابْنِ عَابِدِينَ",a:"Ibn ʿĀbidīn (d. 1252 AH)"});
+  const s2=mk({rel:"foot",t:"تَقْرِيرَاتُ الرَّافِعِيِّ",a:"al-Rāfiʿī (d. 1323 AH)"});
+  const hh=b=>b.offsetHeight;
+  const colsW=W+HG+W+HG+(IND+W);const TW=Math.max(colsW,RW)+40;const x0=20;
+  c1.style.left=x0+"px";c2.style.left=(x0+W+HG)+"px";c3.style.left=(x0+2*(W+HG))+"px";
+  const mid=(x0+(x0+2*(W+HG)+W))/2;root.style.left=(mid-RW/2)+"px";root.style.top="0px";
+  const cy=hh(root)+VG;[c1,c2,c3].forEach(c=>c.style.top=cy+"px");
+  // indented stack under c2 (rail on the left, 24px indent)
+  const rx=x0+W+HG+16;let yy=cy+hh(c2)+20;
+  [s1,s2].forEach(s=>{s.style.left=(x0+W+HG+IND)+"px";s.style.top=yy+"px";yy+=hh(s)+SG});
+  const H=yy+10;const svg=svgFor(st,TW,H);st.style.width=TW+"px";st.style.height=H+"px";
+  const bus=cy-VG/2,rb=hh(root),px=mid;
+  ln(svg,px,rb,px,bus);const cx=[x0+W/2,x0+W+HG+W/2,x0+2*(W+HG)+W/2];ln(svg,cx[0],bus,cx[2],bus);cx.forEach(x=>ln(svg,x,bus,x,cy));
+  // rail under c2
+  const top=cy+hh(c2);let last=0;[s1,s2].forEach(s=>{const my=parseFloat(s.style.top)+Math.min(hh(s)/2,24);ln(svg,rx,my,x0+W+HG+IND,my);last=my});ln(svg,rx,top,rx,last);
+})();
+/* ---- 4. combined ---- */
+(function(){const st=document.getElementById("st2");const W=205,VG=44,HG=22;
+  const mk=o=>{const b=box(o);st.appendChild(b);return b};
+  // left: bracket
+  const a=mk({ref:1,t:"مُخْتَصَرُ الْقُدُورِيِّ",note:"Shown in full on page 4"});
+  const b=mk({rel:null,t:"الْجَامِعُ الصَّغِيرُ",a:"Imām Muḥammad al-Shaybānī (d. 189 AH)",ref:0});b.className="hb-box";b.style.setProperty("--c","var(--root)");
+  const m=mk({rel:"comb",t:"بِدَايَةُ الْمُبْتَدِي",a:"Abū al-Ḥasan al-Marghīnānī (d. 593 AH)"});
+  // right: dotted arrow
+  const s1=mk({root:1,t:"مَنْظُومَةُ النَّسَفِيِّ",a:"Abū Ḥafṣ al-Nasafī (d. 537 AH)"});
+  const m2=mk({rel:"comb",t:"مَجْمَعُ الْبَحْرَيْنِ",a:"Muẓaffar al-Dīn Ibn al-Sāʿātī (d. 694 AH)"});
+  const x0=20,H1=Math.max(a.offsetHeight,b.offsetHeight);
+  a.style.left=x0+"px";a.style.top=(H1-a.offsetHeight)+"px";b.style.left=(x0+W+HG)+"px";b.style.top=(H1-b.offsetHeight)+"px";
+  const mx=x0+(W*2+HG)/2-W/2;m.style.left=mx+"px";m.style.top=(H1+VG)+"px";
+  const rx0=560;s1.style.left=rx0+"px";s1.style.top="0px";
+  m2.style.left=(rx0+60)+"px";m2.style.top=(s1.offsetHeight+120)+"px";
+  const H=Math.max(H1+VG+m.offsetHeight,s1.offsetHeight+120+m2.offsetHeight)+10;const TW=900;
+  const svg=svgFor(st,TW,H);st.style.width=TW+"px";st.style.height=H+"px";
+  const busY=H1+VG/2;const ca=x0+W/2,cb=x0+W+HG+W/2,pxm=mx+W/2;
+  ln(svg,ca,H1,ca,busY);ln(svg,cb,H1,cb,busY);ln(svg,ca,busY,cb,busY);ln(svg,pxm,busY,pxm,H1+VG);
+  const sx=rx0+150,sy=s1.offsetHeight,tx=rx0+60+W/2,ty=s1.offsetHeight+120;
+  pth(svg,`M${sx},${sy} C${sx},${sy+60} ${tx},${ty-60} ${tx},${ty-2}`,"hb-combine");
+})();
+</script></body></html>
