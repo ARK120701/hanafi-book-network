@@ -720,6 +720,14 @@
     border-inline-start:3px solid var(--line);
     padding-inline-start:12px;
   }
+  #landing-card .contact-note{
+    margin-top:18px;
+    padding:10px 14px;
+    background:#f3e8d2;
+    border-radius:6px;
+    font-size:14px;
+  }
+  #landing-card .contact-note a{ color:var(--maroon); font-weight:600; }
   #landing-card .enter-row{
     display:flex;
     align-items:center;
@@ -758,13 +766,17 @@
         <li>Click any book to see notes about it and its author, and to highlight its connections.</li>
         <li>Lines show how books relate: commentary (arrowed), footnote (dashed), summary (dotted), takreej (diamond), and combined works (star-studded).</li>
         <li>Line color matches the book the relationship comes from.</li>
-        <li>The board extends beyond the visible screen; please scroll in all directions to view the diagram in its entirety.</li>
+        <li>The diagram opens centered; the board extends beyond the visible screen, so scroll in all directions to view it in its entirety.</li>
         <li>Use Ctrl/Cmd + scroll to zoom, and drag to pan around the board.</li>
         <li>Search for a book by name using the search box once you're on the board.</li>
       </ul>
       <p class="viewing-note">
         For the best experience, it is recommended that this diagram be viewed on a desktop or laptop computer,
         as the larger display allows the connections between works to be seen with greater clarity.
+      </p>
+      <p class="contact-note">
+        Corrections or suggestions? Want to help with this diagram or other diagrams?
+        Please reach out to me at <a href="tel:5167105543">516-710-5543</a>.
       </p>
       <div class="enter-row">
         <label class="skip-label"><input type="checkbox" id="skipLandingCheckbox"> Don't show this again on this device</label>
@@ -4064,7 +4076,23 @@ document.getElementById('canvas-wrap').addEventListener('wheel', (ev) => {
 
 initAdminMode();
 buildTimeline();
-loadState().then(() => { applyZoom(); loadPublishedNotes(); });
+// Opens the board centered on the middle of the diagram (horizontally and vertically) at a
+// zoom that shows a good chunk of it, instead of at the far top-left of the padded canvas.
+function centerInitialView(){
+  const wrap = document.getElementById('canvas-wrap');
+  if(!wrap || !state.nodes || !state.nodes.length) return;
+  const xs = state.nodes.map(n => n.x), ys = state.nodes.map(n => n.y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs) + 220;
+  const minY = Math.min(...ys), maxY = Math.max(...ys) + 60;
+  const fit = Math.min(wrap.clientWidth / (maxX - minX + 200), wrap.clientHeight / (maxY - minY + 200));
+  zoom = Math.max(0.5, Math.min(0.8, +fit.toFixed(2)));
+  applyZoom();
+  const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+  wrap.scrollLeft = Math.max(0, cx * zoom - wrap.clientWidth / 2);
+  wrap.scrollTop = Math.max(0, cy * zoom - wrap.clientHeight / 2);
+}
+
+loadState().then(() => { applyZoom(); centerInitialView(); loadPublishedNotes(); });
 </script>
 
 </body>
